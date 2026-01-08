@@ -1,65 +1,660 @@
-import Image from "next/image";
+'use client';
+
+import Image from 'next/image';
+import { useState } from 'react';
 
 export default function Home() {
+  const [trackingNumber, setTrackingNumber] = useState('');
+  const [error, setError] = useState('');
+  const [trackingResult, setTrackingResult] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const validateTrackingNumber = (number: string) => {
+    // Remove any non-numeric characters
+    const cleanNumber = number.replace(/\D/g, '');
+    
+    // Check if it's empty
+    if (!cleanNumber) {
+      return 'Please enter a tracking number';
+    }
+    
+    // Check if it's exactly 10-12 digits
+    if (cleanNumber.length < 10 || cleanNumber.length > 12) {
+      return 'Tracking number must be 10-12 digits';
+    }
+    
+    // Check if it's all numbers
+    if (!/^\d+$/.test(cleanNumber)) {
+      return 'Tracking number must contain only numbers';
+    }
+    
+    return null;
+  };
+
+  const handleTrack = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setTrackingResult(null);
+    
+    const validationError = validateTrackingNumber(trackingNumber);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // Generate random delivery days between 2-3
+    const deliveryDays = Math.floor(Math.random() * 2) + 2;
+    
+    setTrackingResult({
+      trackingNumber: trackingNumber.replace(/\D/g, ''),
+      estimatedDelivery: deliveryDays,
+      status: 'In Transit',
+      currentLocation: 'Distribution Center',
+      lastUpdate: new Date().toLocaleString(),
+      route: [
+        { location: 'Origin Facility', time: 'Yesterday, 10:30 AM', status: 'completed' },
+        { location: 'Distribution Center', time: 'Today, 8:45 AM', status: 'active' },
+        { location: 'Out for Delivery', time: `In ${deliveryDays-1} days`, status: 'pending' },
+        { location: 'Delivered', time: `In ${deliveryDays} days`, status: 'pending' }
+      ]
+    });
+    
+    setIsLoading(false);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Allow only numbers
+    const numbersOnly = value.replace(/\D/g, '');
+    setTrackingNumber(numbersOnly);
+    setError('');
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen">
+      {/* Hero Section */}
+      <section id="home" className="relative min-h-screen pt-24 md:pt-32">
+        <div className="absolute inset-0">
+          <Image
+            src="/fright.avif"
+            alt="Modern freight trucks on highway"
+            fill
+            className="object-cover"
+            priority
+            quality={100}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-900/95 via-gray-900/80 to-gray-900/60"></div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        
+        <div className="relative h-full flex items-center">
+          <div className="container mx-auto px-4">
+            <div className="max-w-2xl">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight">
+                Your Freight <span className="text-blue-400">First</span>
+              </h1>
+              
+              <p className="text-lg md:text-xl text-gray-100 mb-8 leading-relaxed max-w-xl">
+                <span className="font-bold">Premium LTL Transportation & Logistics Solutions</span>. 
+                World-class network, advanced technology, and tailored services that put your 
+                shipping needs first.
+              </p>
+
+              {/* Tracking Input */}
+              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-1 max-w-md mb-8 border border-white/20">
+                <form onSubmit={handleTrack} className="flex flex-col sm:flex-row gap-0">
+                  <input
+                    type="text"
+                    value={trackingNumber}
+                    onChange={handleInputChange}
+                    placeholder="Enter 10-12 digit tracking number"
+                    className="flex-grow px-4 py-3 rounded-lg bg-white/95 text-gray-900 placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base"
+                    maxLength={12}
+                    inputMode="numeric"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 hover:scale-[1.02] whitespace-nowrap text-sm md:text-base min-w-[120px] disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {isLoading ? (
+                      <span className="flex items-center justify-center">
+                        <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Tracking...
+                      </span>
+                    ) : 'Track'}
+                  </button>
+                </form>
+                {error && (
+                  <div className="mt-2 px-4">
+                    <p className="text-red-300 text-sm">{error}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Tracking Result */}
+              {trackingResult && (
+                <div className="max-w-md bg-white/10 backdrop-blur-xl rounded-2xl p-6 mb-8 border border-white/20 shadow-2xl animate-fadeIn">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0">
+                      <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
+                        <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-white mb-2">
+                        Your shipping will be delivered in {trackingResult.estimatedDelivery} days
+                      </h3>
+                      <div className="flex items-center gap-2 text-blue-200 mb-4">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"></path>
+                        </svg>
+                        <span className="text-sm">Tracking: {trackingResult.trackingNumber}</span>
+                      </div>
+                      
+                      {/* Progress Bar */}
+                      <div className="mb-4">
+                        <div className="flex justify-between text-sm text-gray-300 mb-2">
+                          <span>Status: {trackingResult.status}</span>
+                          <span>{Math.round((2/4) * 100)}% Complete</span>
+                        </div>
+                        <div className="w-full bg-gray-700/50 rounded-full h-2.5">
+                          <div className="bg-green-500 h-2.5 rounded-full" style={{ width: '50%' }}></div>
+                        </div>
+                      </div>
+
+                      {/* Route Timeline */}
+                      <div className="space-y-4">
+                        {trackingResult.route.map((step: any, index: number) => (
+                          <div key={index} className="flex items-start">
+                            <div className="flex-shrink-0 relative">
+                              <div className={`w-4 h-4 rounded-full ${step.status === 'completed' ? 'bg-green-500' : step.status === 'active' ? 'bg-blue-500' : 'bg-gray-500'}`}></div>
+                              {index < trackingResult.route.length - 1 && (
+                                <div className={`absolute left-1.5 top-4 w-0.5 h-8 ${step.status === 'completed' ? 'bg-green-500' : 'bg-gray-600'}`}></div>
+                              )}
+                            </div>
+                            <div className="ml-4">
+                              <p className={`font-medium ${step.status === 'active' ? 'text-white' : 'text-gray-300'}`}>
+                                {step.location}
+                              </p>
+                              <p className="text-sm text-gray-400">{step.time}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      {/* Quick Actions */}
+                      <div className="mt-6 pt-4 border-t border-white/20">
+                        <div className="flex gap-3">
+                          <button className="flex-1 bg-white/10 hover:bg-white/20 text-white text-sm py-2 px-4 rounded-lg transition-colors">
+                            <div className="flex items-center justify-center gap-2">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              Schedule Delivery
+                            </div>
+                          </button>
+                          <button className="flex-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 text-sm py-2 px-4 rounded-lg transition-colors">
+                            <div className="flex items-center justify-center gap-2">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                              </svg>
+                              Get Updates
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl">
+                <div className="text-center p-3 bg-white/5 backdrop-blur-sm rounded-lg">
+                  <div className="text-xl md:text-2xl font-bold text-white mb-1">99.8%</div>
+                  <div className="text-xs md:text-sm text-gray-300">On-Time</div>
+                </div>
+                <div className="text-center p-3 bg-white/5 backdrop-blur-sm rounded-lg">
+                  <div className="text-xl md:text-2xl font-bold text-white mb-1">24/7</div>
+                  <div className="text-xs md:text-sm text-gray-300">Support</div>
+                </div>
+                <div className="text-center p-3 bg-white/5 backdrop-blur-sm rounded-lg">
+                  <div className="text-xl md:text-2xl font-bold text-white mb-1">1,500+</div>
+                  <div className="text-xs md:text-sm text-gray-300">Trucks</div>
+                </div>
+                <div className="text-center p-3 bg-white/5 backdrop-blur-sm rounded-lg">
+                  <div className="text-xl md:text-2xl font-bold text-white mb-1">50+</div>
+                  <div className="text-xs md:text-sm text-gray-300">States</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </main>
-    </div>
+      </section>
+
+      {/* Empower Your Freight Management */}
+      <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+              Empower Your <span className="text-blue-600">Freight Management</span>
+            </h2>
+            <p className="text-xl text-gray-600">
+              Comprehensive logistics solutions designed to optimize your supply chain efficiency
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-8">
+              <div className="bg-white p-8 rounded-2xl shadow-xl">
+                <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mb-6">
+                  <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">Mission-Critical LTL Freight Solutions</h3>
+                <p className="text-gray-600 mb-6">
+                  Precision-engineered logistics with guaranteed on-time pick-up and delivery, 
+                  ensuring your shipments arrive exactly when needed.
+                </p>
+                <ul className="space-y-3">
+                  <li className="flex items-center text-gray-700">
+                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    Real-time GPS tracking and monitoring
+                  </li>
+                  <li className="flex items-center text-gray-700">
+                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    Damage-free freight shipping guarantee
+                  </li>
+                  <li className="flex items-center text-gray-700">
+                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    Transparent, accurate invoicing system
+                  </li>
+                </ul>
+              </div>
+
+              <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-8 rounded-2xl text-white">
+                <h3 className="text-2xl font-bold mb-4">Putting Your Freight First</h3>
+                <p className="mb-6">
+                  We've engineered a national LTL freight network powered by cutting-edge technology 
+                  and staffed by industry experts, committed to continuous innovation and excellence 
+                  in logistics.
+                </p>
+                <div className="flex items-center">
+                  <svg className="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span>ISO 9001:2015 Certified Quality Management</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative h-[600px] rounded-2xl overflow-hidden shadow-2xl">
+              <Image
+                src="/fright2.avif"
+                alt="Modern freight operations"
+                fill
+                className="object-cover"
+                quality={100}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Coast-to-Coast Network */}
+      <section className="py-20 bg-gray-900 text-white">
+        <div className="container mx-auto px-4">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="relative h-[500px] rounded-2xl overflow-hidden">
+              <Image
+                src="/coastal.avif"
+                alt="Coast-to-coast network coverage"
+                fill
+                className="object-cover"
+                quality={100}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-blue-900/50 to-transparent"></div>
+            </div>
+
+            <div>
+              <h2 className="text-4xl md:text-5xl font-bold mb-8">
+                Coast-to-Coast <span className="text-blue-400">Network</span>
+              </h2>
+              <p className="text-xl text-gray-300 mb-10">
+                We are a premier LTL freight provider across North America, offering extensive 
+                coverage throughout the US and Canada. Our expansive network ensures reliable 
+                service and comprehensive logistics solutions tailored to meet diverse shipping needs.
+              </p>
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                <div className="bg-gray-800/50 backdrop-blur-sm p-6 rounded-xl">
+                  <div className="text-4xl font-bold text-blue-400 mb-2">1,000+</div>
+                  <div className="text-gray-300">Professional Drivers</div>
+                </div>
+                <div className="bg-gray-800/50 backdrop-blur-sm p-6 rounded-xl">
+                  <div className="text-4xl font-bold text-blue-400 mb-2">1,500+</div>
+                  <div className="text-gray-300">Tractors & Trailers</div>
+                </div>
+                <div className="bg-gray-800/50 backdrop-blur-sm p-6 rounded-xl">
+                  <div className="text-4xl font-bold text-blue-400 mb-2">95%</div>
+                  <div className="text-gray-300">US ZIP Codes Covered</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Versatile Capacity Solutions */}
+      <section id="partner" className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+              Versatile Capacity Solutions for <span className="text-blue-600">Every Load</span>
+            </h2>
+            <p className="text-xl text-gray-600">
+              We're expanding our capacity to accommodate all customer needs, ensuring reliable 
+              service regardless of shipment size. Our growth strategy prioritizes flexibility 
+              and responsiveness.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 mb-16">
+            <div className="bg-gradient-to-br from-blue-50 to-white p-8 rounded-2xl shadow-lg text-center">
+              <div className="text-5xl font-bold text-blue-600 mb-4">80+</div>
+              <div className="text-xl font-bold text-gray-900 mb-3">Service Centers</div>
+              <p className="text-gray-600">Nationwide network of modern facilities</p>
+            </div>
+            <div className="bg-gradient-to-br from-blue-50 to-white p-8 rounded-2xl shadow-lg text-center">
+              <div className="text-5xl font-bold text-blue-600 mb-4">250+</div>
+              <div className="text-xl font-bold text-gray-900 mb-3">Tractors Added</div>
+              <p className="text-gray-600">Expanded fleet in 2023 for increased capacity</p>
+            </div>
+            <div className="bg-gradient-to-br from-blue-50 to-white p-8 rounded-2xl shadow-lg text-center">
+              <div className="text-5xl font-bold text-blue-600 mb-4">500+</div>
+              <div className="text-xl font-bold text-gray-900 mb-3">Trailers Produced</div>
+              <p className="text-gray-600">State-of-the-art equipment manufactured in 2023</p>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-8 md:p-12 text-white">
+            <div className="max-w-3xl">
+              <h3 className="text-3xl font-bold mb-6">Commitment to Customer Accountability</h3>
+              <p className="text-xl mb-8">
+                Our local representatives are intimately familiar with your market and industry, 
+                collaborating closely with you to provide tailored services that align perfectly 
+                with your unique timing and handling requirements.
+              </p>
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <div className="font-bold">Personalized Account Management</div>
+                  <div className="text-blue-200">Dedicated support for your business</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Technology Section */}
+      <section className="py-24 bg-gray-50">
+        <div className="container mx-auto px-4 space-y-24">
+
+          {/* ROW 1 — CONTENT LEFT / IMAGE RIGHT */}
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            
+            {/* Content */}
+            <div>
+              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+                Technology for <span className="text-blue-600">Efficiency</span>
+              </h2>
+
+              <p className="text-xl text-gray-600 mb-10 max-w-xl">
+                Simplify and enhance your freight shipping experience with technology
+                tailored for efficiency and ease.
+              </p>
+
+              <div className="space-y-8">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                    <span className="text-blue-600 font-bold text-lg">1M+</span>
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-semibold text-gray-900">
+                      Shipments Annually
+                    </h4>
+                    <p className="text-gray-600">
+                      Handled by our expert linehaul team with precision and care.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                    <span className="text-blue-600 font-bold text-lg">50M</span>
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-semibold text-gray-900">
+                      Miles Optimized
+                    </h4>
+                    <p className="text-gray-600">
+                      Linehaul miles powered by real-time data analytics.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Image */}
+            <div className="relative h-[420px] rounded-3xl overflow-hidden shadow-2xl">
+              <Image
+                src="/techno.avif"
+                alt="Freight technology dashboard"
+                fill
+                className="object-cover"
+                quality={100}
+                priority
+              />
+            </div>
+          </div>
+
+          {/* ROW 2 — IMAGE LEFT / CONTENT RIGHT */}
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            
+            {/* Image */}
+            <div className="relative h-[420px] rounded-3xl overflow-hidden shadow-2xl">
+              <Image
+                src="/techno2.avif"
+                alt="AI powered logistics optimization"
+                fill
+                className="object-cover"
+                quality={100}
+              />
+            </div>
+
+            {/* Content */}
+            <div>
+              <h3 className="text-3xl font-bold text-gray-900 mb-8">
+                Intelligent Tools Built for Scale
+              </h3>
+
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl p-6 shadow-md">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                    Easy-to-Use Shipper Tools
+                  </h4>
+                  <ul className="space-y-2 text-gray-700 text-sm">
+                    <li>✔ Real-time tracking & shipment control</li>
+                    <li>✔ Instant quotes and pickup requests</li>
+                    <li>✔ Automated shipment data entry</li>
+                  </ul>
+                </div>
+
+                <div className="bg-white rounded-xl p-6 shadow-md">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                    AI-Powered Optimization
+                  </h4>
+                  <ul className="space-y-2 text-gray-700 text-sm">
+                    <li>✔ Machine-learning route optimization</li>
+                    <li>✔ Real-time freight flow management</li>
+                    <li>✔ Dynamic pricing algorithms</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* Careers Section */}
+      <section className="py-20 bg-gray-900 text-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              Building <span className="text-blue-400">World-Class LTL</span>
+            </h2>
+            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
+              Join our team of technology and transportation experts dedicated to safety, 
+              growth, and employee opportunity at an industry-leading company.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl overflow-hidden hover:transform hover:scale-105 transition-all duration-300">
+              <div className="relative h-64">
+                <Image
+                  src="/driver.avif"
+                  alt="Professional truck driver"
+                  fill
+                  className="object-cover"
+                  quality={100}
+                />
+              </div>
+              <div className="p-8">
+                <h3 className="text-2xl font-bold mb-4">Drivers</h3>
+                <p className="text-gray-300 mb-6">
+                  We prioritize experienced drivers with competitive benefits and schedules 
+                  that ensure nightly homecomings, and offer new drivers opportunities through 
+                  tuition-free nationwide driver schools.
+                </p>
+                <button className="text-blue-400 font-bold hover:text-blue-300">
+                  Explore Driver Opportunities →
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl overflow-hidden hover:transform hover:scale-105 transition-all duration-300">
+              <div className="relative h-64">
+                <Image
+                  src="/dockworker.avif"
+                  alt="Dockworker operating forklift"
+                  fill
+                  className="object-cover"
+                  quality={100}
+                />
+              </div>
+              <div className="p-8">
+                <h3 className="text-2xl font-bold mb-4">Dockworkers</h3>
+                <p className="text-gray-300 mb-6">
+                  Join our team and be valued as a dockworker or forklift operator in a 
+                  safe environment, with opportunities to expand your skill set and advance 
+                  your career.
+                </p>
+                <button className="text-blue-400 font-bold hover:text-blue-300">
+                  View Dock Positions →
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl overflow-hidden hover:transform hover:scale-105 transition-all duration-300">
+              <div className="relative h-64">
+                <Image
+                  src="/mechanics.avif"
+                  alt="Vehicle mechanic"
+                  fill
+                  className="object-cover"
+                  quality={100}
+                />
+              </div>
+              <div className="p-8">
+                <h3 className="text-2xl font-bold mb-4">Mechanics</h3>
+                <p className="text-gray-300 mb-6">
+                  We offer diverse opportunities to operate various equipment types, 
+                  fostering career growth and development within our organization with 
+                  continuous training programs.
+                </p>
+                <button className="text-blue-400 font-bold hover:text-blue-300">
+                  Mechanical Careers →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonial Section */}
+      <section className="py-20 bg-gradient-to-r from-blue-600 to-blue-800">
+        <div className="container mx-auto px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <div className="relative h-[400px] rounded-2xl overflow-hidden">
+                <Image
+                  src="/commitment.avif"
+                  alt="Team commitment to excellence"
+                  fill
+                  className="object-cover"
+                  quality={100}
+                />
+              </div>
+              
+              <div className="text-white">
+                <div className="text-4xl font-bold mb-8 leading-tight">
+                  "Our team's commitment creates exceptional value for customers"
+                </div>
+                <p className="text-xl mb-8">
+                  PrimeFreight Logistics distinguishes itself through proactive problem-solving 
+                  and preemptive initiatives, demonstrating an unwavering commitment to 
+                  optimizing logistics operations and exceeding customer expectations.
+                </p>
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="font-bold">Michael Rodriguez</div>
+                    <div className="text-blue-200">Chief Operations Officer</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }
