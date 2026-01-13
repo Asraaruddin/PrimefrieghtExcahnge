@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import Navbar from '@/app/components/Navbar';
 import Footer from '@/app/components/Footer';
@@ -10,8 +9,39 @@ import {
   Globe, Shield, Zap, CheckCircle, ArrowRight, Building2, 
   Target, TrendingUp, Award, HelpCircle, FileText, Calendar,
   Star, ThumbsUp, Truck, Package, Route, Warehouse, BarChart,
-  Cpu, Network, Users2, Briefcase, Coffee, Wifi, ShieldCheck
+  Cpu, Network, Users2, Briefcase, Coffee, Wifi, ShieldCheck,
+  ChevronDown, ChevronUp, Loader2
 } from 'lucide-react';
+import { supabase } from '@/app/lib/supabaseClient';
+
+interface AccordionItemProps {
+  question: string;
+  answer: string;
+  index: number;
+}
+
+function AccordionItem({ question, answer, index }: AccordionItemProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="border border-gray-800 rounded-xl overflow-hidden">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-6 py-5 text-left flex justify-between items-center bg-gray-800 hover:bg-gray-750 transition-colors"
+      >
+        <span className="font-bold text-lg text-white">{question}</span>
+        <span className="text-2xl text-gray-300">
+          {isOpen ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+        </span>
+      </button>
+      {isOpen && (
+        <div className="px-6 py-5 bg-gray-800/50 border-t border-gray-700">
+          <p className="text-gray-300">{answer}</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -25,6 +55,10 @@ export default function Contact() {
     message: ''
   });
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+  
   const [scrollProgress, setScrollProgress] = useState(0);
   const heroRef = useRef<HTMLDivElement>(null);
 
@@ -41,20 +75,80 @@ export default function Contact() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Contact form submitted:', formData);
-    alert('Thank you for contacting us! Our team will get back to you within 24 hours.');
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      company: '',
-      subject: '',
-      department: '',
-      urgency: 'normal',
-      message: ''
-    });
+    setLoading(true);
+    setError('');
+    setSuccess(false);
+
+    console.log('Submitting contact form:', formData);
+
+    try {
+      // Basic validation
+      if (!formData.name.trim()) throw new Error('Name is required');
+      if (!formData.email.trim()) throw new Error('Email is required');
+      if (!formData.phone.trim()) throw new Error('Phone number is required');
+      if (!formData.subject.trim()) throw new Error('Subject is required');
+      if (!formData.department.trim()) throw new Error('Department is required');
+      if (!formData.message.trim()) throw new Error('Message is required');
+
+      // Prepare data for Supabase
+      const submissionData = {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        company: formData.company.trim() || null,
+        subject: formData.subject.trim(),
+        department: formData.department,
+        urgency: formData.urgency,
+        message: formData.message.trim(),
+        source: 'contact_page',
+        status: 'new'
+      };
+
+      console.log('Inserting into contact_page_submissions:', submissionData);
+
+      // Insert into Supabase
+      const { data, error: supabaseError } = await supabase
+        .from('contact_page_submissions')
+        .insert([submissionData])
+        .select();
+
+      console.log('Supabase response:', { data, error: supabaseError });
+
+      if (supabaseError) {
+        console.error('Supabase Error:', supabaseError);
+        throw new Error(`Database error: ${supabaseError.message}`);
+      }
+
+      if (!data) {
+        throw new Error('No response from server');
+      }
+
+      console.log('✅ Contact form saved successfully:', data[0]);
+      setSuccess(true);
+      
+      // Reset form
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        company: '',
+        subject: '',
+        department: '',
+        urgency: 'normal',
+        message: ''
+      });
+
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccess(false), 5000);
+
+    } catch (err: any) {
+      console.error('❌ Contact form submission error:', err);
+      setError(err.message || 'An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -62,6 +156,7 @@ export default function Contact() {
       ...formData,
       [e.target.name]: e.target.value
     });
+    if (error) setError('');
   };
 
   const contactMethods = [
@@ -130,30 +225,30 @@ export default function Contact() {
     }
   ];
 
-  const globalOffices = [
+  const faqItems = [
     {
-      location: "North America HQ",
-      address: "1441 S Hoover Rd, Wichita, KS 67209",
-      phone: "+1 (316) 555-1000",
-      email: "na@primelog.com",
-      hours: "Mon-Fri: 8AM-8PM EST",
-      icon: Building2
+      question: "What's the fastest way to get support?",
+      answer: "For urgent matters, call our 24/7 support hotline at +1 (316) 555-1234. For non-urgent inquiries, email us at support@primefreightexpress.com with a guaranteed response within 4 hours."
     },
     {
-      location: "Europe Office",
-      address: "123 Logistics Blvd, Amsterdam, Netherlands",
-      phone: "+31 20 555 1234",
-      email: "europe@primelog.com",
-      hours: "Mon-Fri: 9AM-6PM CET",
-      icon: Globe
+      question: "Do you offer support in languages other than English?",
+      answer: "Yes! We provide support in 12+ languages including Spanish, French, German, Mandarin, Japanese, and Arabic. Our multilingual team is available 24/7 to assist you."
     },
     {
-      location: "Asia Pacific Hub",
-      address: "456 Shipping Ave, Singapore 018989",
-      phone: "+65 6555 1234",
-      email: "asia@primelog.com",
-      hours: "Mon-Fri: 9AM-7PM SGT",
-      icon: MapPin
+      question: "What information should I include when contacting support?",
+      answer: "Please include your tracking number (if applicable), shipment details, company name, contact information, and a detailed description of your issue or inquiry to help us serve you faster."
+    },
+    {
+      question: "Can I schedule a consultation with our logistics experts?",
+      answer: "Absolutely! You can schedule a free consultation with our logistics experts through our contact form or by calling our sales department. We'll discuss your specific needs and provide tailored solutions."
+    },
+    {
+      question: "What are your business hours for different departments?",
+      answer: "Our 24/7 hotline operates round the clock. Sales department: Mon-Fri 8AM-8PM EST. Customer support: 24/7 via phone, 6AM-10PM via email. Technical support: 24/7."
+    },
+    {
+      question: "How quickly can you respond to international shipping inquiries?",
+      answer: "International department responds within 6 hours during business days. For urgent international shipping needs, use our 24/7 hotline for immediate assistance."
     }
   ];
 
@@ -161,24 +256,25 @@ export default function Contact() {
     <>
       <Navbar />
       <main className="min-h-screen">
-        {/* Hero Section */}
+        {/* Hero Section - Fixed visibility issue */}
         <section ref={heroRef} className="relative min-h-screen pt-24 md:pt-32">
           <div className="absolute inset-0">
             <div 
               className="absolute inset-0 transition-transform duration-1000 ease-out"
               style={{
                 transform: `scale(${1 + scrollProgress * 0.03})`,
-                backgroundImage: 'url(/contact-us.avif)',
+                backgroundImage: 'url(/contact-us2.avif)',
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
               }}
             />
+            {/* Overlay for better text visibility */}
+            <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/20" />
           </div>
           
           <div className="relative h-full flex items-center">
             <div className="container mx-auto px-4">
               <div className="max-w-2xl">
-                {/* Strong minimal content on image */}
                 <div className="mb-8">
                   <span className="inline-block px-4 py-2 bg-blue-600/90 backdrop-blur-sm rounded-full text-white font-bold text-sm mb-4">
                     CONNECT WITH US
@@ -189,13 +285,10 @@ export default function Contact() {
                   Get in <span className="text-blue-300">Touch</span>
                 </h1>
                 
-                <p className="text-xl text-white mb-10 leading-relaxed font-medium drop-shadow-lg max-w-xl">
+                <p className="text-xl text-white/90 mb-10 leading-relaxed font-medium drop-shadow-2xl max-w-xl">
                   Want to get in touch? We'd love to hear from you. Here's how you can reach us.
                 </p>
 
-                
-
-                {/* Quick CTA */}
                 <div className="flex flex-wrap gap-4">
                   <Link
                     href="#contact-form"
@@ -214,9 +307,6 @@ export default function Contact() {
               </div>
             </div>
           </div>
-
-          
-          
         </section>
 
         {/* Contact Methods Section */}
@@ -233,73 +323,62 @@ export default function Contact() {
               </div>
 
               <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-20">
-  {contactMethods.map((method, index) => (
-    <div
-      key={index}
-      className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100 min-h-[340px] flex flex-col"
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <div className={`w-12 h-12 ${method.color} rounded-xl flex items-center justify-center`}>
-          <method.icon className="w-6 h-6 text-white" />
-        </div>
+                {contactMethods.map((method, index) => (
+                  <div
+                    key={index}
+                    className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100 min-h-[340px] flex flex-col"
+                  >
+                    <div className="flex items-center justify-between mb-5">
+                      <div className={`w-12 h-12 ${method.color} rounded-xl flex items-center justify-center`}>
+                        <method.icon className="w-6 h-6 text-white" />
+                      </div>
+                      <span className="text-xs font-semibold px-3 py-1 bg-gray-100 text-gray-700 rounded-full whitespace-nowrap">
+                        {method.type}
+                      </span>
+                    </div>
 
-        <span className="text-xs font-semibold px-3 py-1 bg-gray-100 text-gray-700 rounded-full whitespace-nowrap">
-          {method.type}
-        </span>
-      </div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-2 leading-tight">
+                      {method.title}
+                    </h3>
 
-      {/* Title */}
-      <h3 className="text-lg font-bold text-gray-900 mb-2 leading-tight">
-        {method.title}
-      </h3>
+                    <p className="text-gray-600 text-sm mb-6 leading-relaxed">
+                      {method.description}
+                    </p>
 
-      {/* Description */}
-      <p className="text-gray-600 text-sm mb-6 leading-relaxed">
-        {method.description}
-      </p>
+                    <div className="flex-grow" />
 
-      {/* Spacer pushes contact info to bottom */}
-      <div className="flex-grow" />
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
+                          <Phone className="w-4 h-4 text-gray-600" />
+                        </div>
+                        <div className="max-w-full">
+                          <div className="font-semibold text-gray-900 text-sm break-all">
+                            {method.contact}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Primary contact
+                          </div>
+                        </div>
+                      </div>
 
-      {/* Contact Info */}
-      <div className="space-y-4">
-        {/* Contact */}
-        <div className="flex items-start gap-3">
-          <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-            <Phone className="w-4 h-4 text-gray-600" />
-          </div>
-
-          <div className="max-w-full">
-            <div className="font-semibold text-gray-900 text-sm break-all">
-              {method.contact}
-            </div>
-            <div className="text-xs text-gray-500">
-              Primary contact
-            </div>
-          </div>
-        </div>
-
-        {/* Response Time */}
-        <div className="flex items-start gap-3">
-          <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-            <Clock className="w-4 h-4 text-gray-600" />
-          </div>
-
-          <div>
-            <div className="font-semibold text-green-600 text-sm">
-              {method.response}
-            </div>
-            <div className="text-xs text-gray-500">
-              Average response time
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  ))}
-</div>
-
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
+                          <Clock className="w-4 h-4 text-gray-600" />
+                        </div>
+                        <div>
+                          <div className="font-semibold text-green-600 text-sm">
+                            {method.response}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Average response time
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
 
               {/* Talk to Sales & Support Section */}
               <div className="grid lg:grid-cols-2 gap-12 mb-20">
@@ -314,7 +393,7 @@ export default function Contact() {
                     </div>
                   </div>
                   <p className="text-blue-100 mb-8 leading-relaxed">
-                    Interested in PrimeLog's comprehensive logistics solutions? Just pick up the phone to chat with a member of our sales team. Whether you're looking for LTL services, freight forwarding, or customized logistics solutions, we're here to help.
+                    Interested in PrimeFreightExpress's comprehensive logistics solutions? Just pick up the phone to chat with a member of our sales team. Whether you're looking for LTL services, freight forwarding, or customized logistics solutions, we're here to help.
                   </p>
                   <div className="space-y-4">
                     <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6">
@@ -348,7 +427,7 @@ export default function Contact() {
                     </div>
                   </div>
                   <p className="text-gray-300 mb-8 leading-relaxed">
-                    Sometimes you need a little help from your friends. Or a PrimeLog support representative. Don't worry... we're here for you. Our customer support team is trained to handle everything from tracking issues to complex logistics challenges.
+                    Sometimes you need a little help from your friends. Or a PrimeFreightExpress support representative. Don't worry... we're here for you. Our customer support team is trained to handle everything from tracking issues to complex logistics challenges.
                   </p>
                   <div className="space-y-6">
                     <div className="flex items-start gap-4">
@@ -370,9 +449,12 @@ export default function Contact() {
                       </div>
                     </div>
                   </div>
-                  <button className="w-full bg-white text-gray-900 font-bold py-3 px-6 rounded-lg hover:bg-gray-100 transition-colors mt-8">
+                  <Link
+                    href="#contact-form"
+                    className="w-full bg-white text-gray-900 font-bold py-3 px-6 rounded-lg hover:bg-gray-100 transition-colors mt-8 flex items-center justify-center"
+                  >
                     Contact Support
-                  </button>
+                  </Link>
                 </div>
               </div>
 
@@ -407,79 +489,15 @@ export default function Contact() {
           </div>
         </section>
 
-        {/* Global Offices Section */}
         <section className="py-24 bg-gradient-to-b from-gray-50 to-white">
           <div className="container mx-auto px-4">
-            <div className="max-w-6xl mx-auto">
-              <div className="text-center mb-16">
-                <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-                  Global <span className="text-blue-600">Offices</span>
-                </h2>
-                <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                  Our worldwide network ensures support wherever your business takes you
-                </p>
-              </div>
-
-              <div className="grid lg:grid-cols-3 gap-8 mb-20">
-                {globalOffices.map((office, index) => (
-                  <div key={index} className="bg-white rounded-2xl p-8 shadow-xl border border-gray-100">
-                    <div className="flex items-center mb-6">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl flex items-center justify-center mr-4">
-                        <office.icon className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-gray-900">{office.location}</h3>
-                        <p className="text-blue-600 text-sm">Main Office</p>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-4">
-                      <div className="flex items-start gap-3">
-                        <MapPin className="w-5 h-5 text-gray-400 mt-1 flex-shrink-0" />
-                        <div>
-                          <div className="font-medium text-gray-900">Address</div>
-                          <div className="text-gray-600">{office.address}</div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-start gap-3">
-                        <Phone className="w-5 h-5 text-gray-400 mt-1 flex-shrink-0" />
-                        <div>
-                          <div className="font-medium text-gray-900">Phone</div>
-                          <div className="text-gray-600">{office.phone}</div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-start gap-3">
-                        <Mail className="w-5 h-5 text-gray-400 mt-1 flex-shrink-0" />
-                        <div>
-                          <div className="font-medium text-gray-900">Email</div>
-                          <div className="text-gray-600">{office.email}</div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-start gap-3">
-                        <Clock className="w-5 h-5 text-gray-400 mt-1 flex-shrink-0" />
-                        <div>
-                          <div className="font-medium text-gray-900">Business Hours</div>
-                          <div className="text-gray-600">{office.hours}</div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <button className="w-full bg-gray-900 hover:bg-black text-white font-bold py-3 px-6 rounded-lg transition-colors mt-8">
-                      Get Directions
-                    </button>
-                  </div>
-                ))}
-              </div>
-
+            <div className="max-w-6xl mx-auto">  
               {/* Why Contact Us Section */}
               <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-3xl p-8 md:p-12 text-white">
                 <div className="grid lg:grid-cols-2 gap-12 items-center">
                   <div>
                     <h3 className="text-3xl font-bold mb-6">
-                      Why Contact <span className="text-blue-200">PrimeLog?</span>
+                      Why Contact <span className="text-blue-200">PrimeFreightExpress?</span>
                     </h3>
                     <p className="text-blue-100 mb-8 leading-relaxed">
                       We're not just another logistics company. We're your strategic partner in supply chain optimization. When you contact us, you're connecting with industry experts who understand the complexities of modern logistics.
@@ -567,6 +585,40 @@ export default function Contact() {
                 </p>
               </div>
 
+              {/* Success Message */}
+              {success && (
+                <div className="mb-8 p-6 bg-green-500/10 border border-green-500/30 rounded-2xl">
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center mr-4">
+                      <CheckCircle className="w-6 h-6 text-green-500" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-green-700 mb-1">Message Sent Successfully!</h3>
+                      <p className="text-green-600">
+                        Thank you for contacting us. Our team will get back to you within 24 hours.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Error Message */}
+              {error && (
+                <div className="mb-8 p-6 bg-red-500/10 border border-red-500/30 rounded-2xl">
+                  <div className="flex items-start">
+                    <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
+                      <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-red-700 mb-1">Error</h3>
+                      <p className="text-red-600">{error}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-white rounded-3xl shadow-2xl p-6 md:p-12 border border-gray-100">
                 <form onSubmit={handleSubmit} className="space-y-8">
                   {/* Personal Information */}
@@ -592,7 +644,8 @@ export default function Contact() {
                           value={formData.name}
                           onChange={handleChange}
                           required
-                          className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
+                          disabled={loading}
+                          className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
                           placeholder="John Smith"
                         />
                       </div>
@@ -606,7 +659,8 @@ export default function Contact() {
                           value={formData.email}
                           onChange={handleChange}
                           required
-                          className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
+                          disabled={loading}
+                          className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
                           placeholder="john@company.com"
                         />
                       </div>
@@ -623,7 +677,8 @@ export default function Contact() {
                           value={formData.phone}
                           onChange={handleChange}
                           required
-                          className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
+                          disabled={loading}
+                          className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
                           placeholder="(555) 123-4567"
                         />
                       </div>
@@ -636,7 +691,8 @@ export default function Contact() {
                           name="company"
                           value={formData.company}
                           onChange={handleChange}
-                          className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
+                          disabled={loading}
+                          className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
                           placeholder="Your Company LLC"
                         />
                       </div>
@@ -666,7 +722,8 @@ export default function Contact() {
                           value={formData.subject}
                           onChange={handleChange}
                           required
-                          className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
+                          disabled={loading}
+                          className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500 disabled:opacity-50 disabled:cursor-not-allowed"
                           placeholder="What is this regarding?"
                         />
                       </div>
@@ -679,7 +736,8 @@ export default function Contact() {
                           value={formData.department}
                           onChange={handleChange}
                           required
-                          className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                          disabled={loading}
+                          className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <option value="">Select department</option>
                           <option value="sales">Sales & Business Development</option>
@@ -704,7 +762,7 @@ export default function Contact() {
                               formData.urgency === level
                                 ? 'border-blue-500 bg-blue-50'
                                 : 'border-gray-200 hover:border-gray-300'
-                            }`}
+                            } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                           >
                             <input
                               type="radio"
@@ -712,6 +770,7 @@ export default function Contact() {
                               value={level}
                               checked={formData.urgency === level}
                               onChange={handleChange}
+                              disabled={loading}
                               className="hidden"
                             />
                             <div className="flex flex-col items-center">
@@ -737,7 +796,8 @@ export default function Contact() {
                         onChange={handleChange}
                         required
                         rows={6}
-                        className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
+                        disabled={loading}
+                        className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500 disabled:opacity-50 disabled:cursor-not-allowed resize-none"
                         placeholder="Please provide details about your inquiry, including any specific requirements or deadlines..."
                       />
                     </div>
@@ -753,10 +813,24 @@ export default function Contact() {
                       </div>
                       <button
                         type="submit"
-                        className="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-4 px-12 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/30 flex items-center space-x-3"
+                        disabled={loading}
+                        className={`font-bold py-4 px-12 rounded-xl transition-all duration-300 flex items-center space-x-3 ${
+                          loading
+                            ? 'bg-blue-400 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 hover:scale-105 shadow-lg hover:shadow-blue-500/30'
+                        } text-white`}
                       >
-                        <span>Send Message</span>
-                        <ArrowRight className="w-5 h-5" />
+                        {loading ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <span>Sending...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Send Message</span>
+                            <ArrowRight className="w-5 h-5" />
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -771,12 +845,12 @@ export default function Contact() {
                       Our Contact <span className="text-green-600">Promise</span>
                     </h3>
                     <p className="text-gray-600 mb-8">
-                      When you reach out to PrimeLog, you can expect exceptional service at every touchpoint. We're committed to providing timely, relevant, and helpful responses to all inquiries.
+                      When you reach out to PrimeFreightExpress, you can expect exceptional service at every touchpoint. We're committed to providing timely, relevant, and helpful responses to all inquiries.
                     </p>
                     <div className="space-y-4">
                       <div className="flex items-center text-gray-700">
                         <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
-                        <span>Guanteed response within 24 hours</span>
+                        <span>Guaranteed response within 24 hours</span>
                       </div>
                       <div className="flex items-center text-gray-700">
                         <CheckCircle className="w-5 h-5 text-green-500 mr-3" />
@@ -817,39 +891,48 @@ export default function Contact() {
                 </p>
               </div>
 
-              <div className="space-y-6">
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700">
-                  <h4 className="text-xl font-bold mb-3">What's the fastest way to get support?</h4>
-                  <p className="text-gray-300">
-                    For urgent matters, call our 24/7 support hotline at +1 (316) 555-1234. For non-urgent inquiries, email us at support@primelog.com with a guaranteed response within 4 hours.
-                  </p>
-                </div>
+              <div className="space-y-4">
+                {faqItems.map((item, index) => (
+                  <AccordionItem 
+                    key={index}
+                    question={item.question}
+                    answer={item.answer}
+                    index={index}
+                  />
+                ))}
+              </div>
 
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700">
-                  <h4 className="text-xl font-bold mb-3">Do you offer support in languages other than English?</h4>
-                  <p className="text-gray-300">
-                    Yes! We provide support in 12+ languages including Spanish, French, German, Mandarin, Japanese, and Arabic. Our multilingual team is available 24/7 to assist you.
-                  </p>
+              {/* Still have questions? */}
+              <div className="mt-16 text-center">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full mb-6">
+                  <HelpCircle className="w-8 h-8 text-white" />
                 </div>
-
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700">
-                  <h4 className="text-xl font-bold mb-3">What information should I include when contacting support?</h4>
-                  <p className="text-gray-300">
-                    Please include your tracking number (if applicable), shipment details, company name, contact information, and a detailed description of your issue or inquiry to help us serve you faster.
-                  </p>
-                </div>
-
-                <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border border-gray-700">
-                  <h4 className="text-xl font-bold mb-3">Can I schedule a consultation with your logistics experts?</h4>
-                  <p className="text-gray-300">
-                    Absolutely! You can schedule a free consultation with our logistics experts through our contact form or by calling our sales department. We'll discuss your specific needs and provide tailored solutions.
-                  </p>
+                <h3 className="text-2xl font-bold mb-4">Still have questions?</h3>
+                <p className="text-gray-300 mb-8 max-w-2xl mx-auto">
+                  Can't find the answer you're looking for? Please chat with our friendly team.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Link
+                    href="mailto:support@primefreightexpress.com"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Mail className="w-5 h-5" />
+                    Email Us
+                  </Link>
+                  <Link
+                    href="tel:+13165551234"
+                    className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 px-8 rounded-lg transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Phone className="w-5 h-5" />
+                    Call Now
+                  </Link>
                 </div>
               </div>
             </div>
           </div>
         </section>
       </main>
+      <Footer />
     </>
   );
 }

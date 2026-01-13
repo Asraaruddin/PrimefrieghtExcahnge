@@ -4,16 +4,24 @@ import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Navbar from '@/app/components/Navbar';
-import Footer from '@/app/components/Footer';
 import { 
   Truck, Shield, Mail, Users, Building2, Globe, Target, BarChart, 
   CheckCircle, ArrowRight, Handshake, TrendingUp, Headphones, 
   Award, Clock, DollarSign, MapPin, Phone, FileText, Briefcase,
-  Package, Warehouse, Route, Cpu, Network, Zap
+  Package, Warehouse, Route, Cpu, Network, Zap, Loader2
 } from 'lucide-react';
+import { supabase } from '@/app/lib/supabaseClient';
 
 export default function BecomeAPartner() {
-  const [formData, setFormData] = useState({
+  // State for Consultation Form
+  const [consultationData, setConsultationData] = useState({
+    name: '',
+    email: '',
+    phone: ''
+  });
+
+  // State for Partner Application Form
+  const [applicationData, setApplicationData] = useState({
     firstName: '',
     lastName: '',
     companyName: '',
@@ -26,6 +34,16 @@ export default function BecomeAPartner() {
 
   const [scrollProgress, setScrollProgress] = useState(0);
   const heroRef = useRef<HTMLDivElement>(null);
+  
+  // Loading and error states for Consultation Form
+  const [consultationLoading, setConsultationLoading] = useState(false);
+  const [consultationError, setConsultationError] = useState('');
+  const [consultationSuccess, setConsultationSuccess] = useState(false);
+  
+  // Loading and error states for Partner Application Form
+  const [applicationLoading, setApplicationLoading] = useState(false);
+  const [applicationError, setApplicationError] = useState('');
+  const [applicationSuccess, setApplicationSuccess] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -40,77 +58,189 @@ export default function BecomeAPartner() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Handle Consultation Form Submission
+  const handleConsultationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Partner application submitted:', formData);
-    alert('Thank you for your partnership application! Our team will review it and contact you within 24 hours.');
-    setFormData({
-      firstName: '',
-      lastName: '',
-      companyName: '',
-      email: '',
-      phone: '',
-      website: '',
-      companyOverview: '',
-      message: ''
-    });
+    setConsultationLoading(true);
+    setConsultationError('');
+    setConsultationSuccess(false);
+
+    console.log('Submitting consultation request...', consultationData);
+
+    try {
+      // Basic validation
+      if (!consultationData.name.trim()) throw new Error('Name is required');
+      if (!consultationData.email.trim()) throw new Error('Email is required');
+      if (!consultationData.phone.trim()) throw new Error('Phone number is required');
+
+      // Prepare data for Supabase
+      const submissionData = {
+        name: consultationData.name.trim(),
+        email: consultationData.email.trim(),
+        phone: consultationData.phone.trim(),
+        source: 'become_partner_consultation',
+        status: 'new'
+      };
+
+      console.log('Inserting consultation into Supabase:', submissionData);
+
+      // Insert into consultation_requests table
+      const { data, error: supabaseError } = await supabase
+        .from('consultation_requests')
+        .insert([submissionData])
+        .select();
+
+      console.log('Consultation Supabase response:', { data, error: supabaseError });
+
+      if (supabaseError) {
+        console.error('Consultation Supabase Error:', supabaseError);
+        throw new Error(`Database error: ${supabaseError.message}`);
+      }
+
+      if (!data) {
+        throw new Error('No response from server');
+      }
+
+      console.log('✅ Consultation request saved successfully:', data[0]);
+      setConsultationSuccess(true);
+      
+      // Reset form
+      setConsultationData({
+        name: '',
+        email: '',
+        phone: ''
+      });
+
+      // Clear success message after 5 seconds
+      setTimeout(() => setConsultationSuccess(false), 5000);
+
+    } catch (err: any) {
+      console.error('❌ Consultation submission error:', err);
+      setConsultationError(err.message || 'An error occurred. Please try again.');
+    } finally {
+      setConsultationLoading(false);
+    }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
+  // Handle Partner Application Form Submission
+  const handleApplicationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setApplicationLoading(true);
+    setApplicationError('');
+    setApplicationSuccess(false);
+
+    console.log('Submitting partner application...', applicationData);
+
+    try {
+      // Basic validation
+      if (!applicationData.firstName.trim()) throw new Error('First name is required');
+      if (!applicationData.lastName.trim()) throw new Error('Last name is required');
+      if (!applicationData.companyName.trim()) throw new Error('Company name is required');
+      if (!applicationData.email.trim()) throw new Error('Email is required');
+      if (!applicationData.phone.trim()) throw new Error('Phone number is required');
+      if (!applicationData.message.trim()) throw new Error('Message is required');
+
+      // Prepare data for Supabase
+      const submissionData = {
+        first_name: applicationData.firstName.trim(),
+        last_name: applicationData.lastName.trim(),
+        company_name: applicationData.companyName.trim(),
+        email: applicationData.email.trim(),
+        phone: applicationData.phone.trim(),
+        website: applicationData.website.trim() || null,
+        company_overview: applicationData.companyOverview.trim() || null,
+        message: applicationData.message.trim(),
+        source: 'become_partner_application',
+        status: 'new'
+      };
+
+      console.log('Inserting application into Supabase:', submissionData);
+
+      // Insert into partner_applications table
+      const { data, error: supabaseError } = await supabase
+        .from('partner_applications')
+        .insert([submissionData])
+        .select();
+
+      console.log('Application Supabase response:', { data, error: supabaseError });
+
+      if (supabaseError) {
+        console.error('Application Supabase Error:', supabaseError);
+        throw new Error(`Database error: ${supabaseError.message}`);
+      }
+
+      if (!data) {
+        throw new Error('No response from server');
+      }
+
+      console.log('✅ Partner application saved successfully:', data[0]);
+      setApplicationSuccess(true);
+      
+      // Reset form
+      setApplicationData({
+        firstName: '',
+        lastName: '',
+        companyName: '',
+        email: '',
+        phone: '',
+        website: '',
+        companyOverview: '',
+        message: ''
+      });
+
+      // Clear success message after 5 seconds
+      setTimeout(() => setApplicationSuccess(false), 5000);
+
+    } catch (err: any) {
+      console.error('❌ Application submission error:', err);
+      setApplicationError(err.message || 'An error occurred. Please try again.');
+    } finally {
+      setApplicationLoading(false);
+    }
+  };
+
+  // Handle Consultation Form Changes
+  const handleConsultationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setConsultationData({
+      ...consultationData,
       [e.target.name]: e.target.value
     });
+    if (consultationError) setConsultationError('');
+  };
+
+  // Handle Partner Application Form Changes
+  const handleApplicationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setApplicationData({
+      ...applicationData,
+      [e.target.name]: e.target.value
+    });
+    if (applicationError) setApplicationError('');
   };
 
   return (
     <>
       <Navbar />
       <main className="min-h-screen">
-        {/* Hero Section - Simple, Clean, with Visible Background */}
+        {/* Hero Section */}
         <section ref={heroRef} className="relative min-h-screen pt-24 md:pt-32">
-          {/* Option 1: Using div with background image (no Next.js optimization) */}
           <div className="absolute inset-0">
             <div 
               className="absolute inset-0 transition-transform duration-1000 ease-out"
               style={{
                 transform: `scale(${1 + scrollProgress * 0.03})`,
-                backgroundImage: 'url(/business-partner2.avif)', // Renamed without space
+                backgroundImage: 'url(/partnerwithus.avif)',
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 backgroundRepeat: 'no-repeat',
               }}
             />
-            {/* Very light overlay just for text readability */}
             <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-black/10 to-transparent"></div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent"></div>
           </div>
-          
-          {/* Option 2: Using Next.js Image Component (Better Performance) */}
-          {/* Uncomment this and comment out the above div if you want better image optimization */}
-          {/*
-          <div className="absolute inset-0">
-            <Image
-              src="/business-partner.avif"
-              alt="Business partnership meeting"
-              fill
-              className="object-cover transition-transform duration-1000 ease-out"
-              style={{
-                transform: `scale(${1 + scrollProgress * 0.03})`,
-              }}
-              priority
-              quality={100}
-              sizes="100vw"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-black/10 to-transparent"></div>
-            <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent"></div>
-          </div>
-          */}
           
           <div className="relative h-full flex items-center">
             <div className="container mx-auto px-4">
               <div className="max-w-2xl">
-                {/* Minimal strong content */}
                 <div className="mb-8">
                   <span className="inline-block px-4 py-2 bg-blue-600/90 backdrop-blur-sm rounded-full text-white font-bold text-sm">
                     EXCLUSIVE PARTNERSHIP
@@ -125,7 +255,6 @@ export default function BecomeAPartner() {
                   Join the leading logistics network and transform your business.
                 </p>
 
-                {/* Simple CTA */}
                 <div className="flex flex-col sm:flex-row gap-4 mb-12">
                   <Link
                     href="#apply"
@@ -140,14 +269,12 @@ export default function BecomeAPartner() {
                     Learn More
                   </Link>
                 </div>
-
-       
               </div>
             </div>
           </div>
         </section>
 
-        {/* Rest of your page content remains the same */}
+        {/* Content Sections */}
         <section className="py-20 bg-white">
           <div className="container mx-auto px-4">
             <div className="max-w-5xl mx-auto">
@@ -445,9 +572,12 @@ export default function BecomeAPartner() {
                       Volume Discounts
                     </li>
                   </ul>
-                  <button className="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors">
+                  <Link
+                    href="#apply"
+                    className="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
+                  >
                     Apply Now
-                  </button>
+                  </Link>
                 </div>
 
                 <div className="bg-gray-50 rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-300 transition-all">
@@ -484,7 +614,7 @@ export default function BecomeAPartner() {
           </div>
         </section>
 
-        {/* Talk to Our Experts */}
+        {/* Talk to Our Experts - WITH FORM */}
         <section className="py-20 bg-gradient-to-br from-gray-900 to-gray-950 text-white">
           <div className="container mx-auto px-4">
             <div className="max-w-6xl mx-auto">
@@ -548,6 +678,7 @@ export default function BecomeAPartner() {
                   </div>
                 </div>
                 
+                {/* CONSULTATION FORM */}
                 <div className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-sm rounded-2xl p-8 border border-white/10">
                   <h3 className="text-2xl font-bold mb-6">Schedule a Consultation</h3>
                   <p className="text-gray-300 mb-8">
@@ -555,12 +686,43 @@ export default function BecomeAPartner() {
                     a personalized consultation.
                   </p>
                   
-                  <div className="space-y-4">
+                  {/* Success Message */}
+                  {consultationSuccess && (
+                    <div className="mb-6 p-4 bg-green-500/20 border border-green-500/40 rounded-lg">
+                      <div className="flex items-center">
+                        <CheckCircle className="w-5 h-5 text-green-400 mr-3" />
+                        <p className="text-green-400 font-medium">
+                          Consultation request submitted successfully!
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Error Message */}
+                  {consultationError && (
+                    <div className="mb-6 p-4 bg-red-500/20 border border-red-500/40 rounded-lg">
+                      <div className="flex items-start">
+                        <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </div>
+                        <p className="text-red-400">{consultationError}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <form onSubmit={handleConsultationSubmit} className="space-y-6">
                     <div>
                       <label className="block text-gray-300 mb-2">Your Name *</label>
                       <input
                         type="text"
-                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                        name="name"
+                        value={consultationData.name}
+                        onChange={handleConsultationChange}
+                        required
+                        disabled={consultationLoading}
+                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white disabled:opacity-50 disabled:cursor-not-allowed"
                         placeholder="John Doe"
                       />
                     </div>
@@ -569,7 +731,12 @@ export default function BecomeAPartner() {
                       <label className="block text-gray-300 mb-2">Business Email *</label>
                       <input
                         type="email"
-                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                        name="email"
+                        value={consultationData.email}
+                        onChange={handleConsultationChange}
+                        required
+                        disabled={consultationLoading}
+                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white disabled:opacity-50 disabled:cursor-not-allowed"
                         placeholder="john@company.com"
                       />
                     </div>
@@ -578,15 +745,35 @@ export default function BecomeAPartner() {
                       <label className="block text-gray-300 mb-2">Phone Number *</label>
                       <input
                         type="tel"
-                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                        name="phone"
+                        value={consultationData.phone}
+                        onChange={handleConsultationChange}
+                        required
+                        disabled={consultationLoading}
+                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white disabled:opacity-50 disabled:cursor-not-allowed"
                         placeholder="(555) 123-4567"
                       />
                     </div>
                     
-                    <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">
-                      Request Consultation
+                    <button
+                      type="submit"
+                      disabled={consultationLoading}
+                      className={`w-full font-bold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${
+                        consultationLoading 
+                          ? 'bg-blue-500 cursor-not-allowed opacity-90' 
+                          : 'bg-blue-600 hover:bg-blue-700 hover:scale-[1.02] active:scale-95'
+                      }`}
+                    >
+                      {consultationLoading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        'Request Consultation'
+                      )}
                     </button>
-                  </div>
+                  </form>
                 </div>
               </div>
             </div>
@@ -609,8 +796,42 @@ export default function BecomeAPartner() {
                 </p>
               </div>
 
+              {/* Success Message */}
+              {applicationSuccess && (
+                <div className="mb-8 p-6 bg-green-500/10 border border-green-500/30 rounded-2xl">
+                  <div className="flex items-center">
+                    <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center mr-4">
+                      <CheckCircle className="w-6 h-6 text-green-500" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-green-700 mb-1">Application Submitted!</h3>
+                      <p className="text-green-600">
+                        Thank you for your partnership application. Our team will review it and contact you within 24 hours.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Error Message */}
+              {applicationError && (
+                <div className="mb-8 p-6 bg-red-500/10 border border-red-500/30 rounded-2xl">
+                  <div className="flex items-start">
+                    <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
+                      <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-red-700 mb-1">Error</h3>
+                      <p className="text-red-600">{applicationError}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
-                <form onSubmit={handleSubmit} className="space-y-8">
+                <form onSubmit={handleApplicationSubmit} className="space-y-8">
                   {/* Name Section */}
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 mb-6 pb-3 border-b border-gray-200">
@@ -624,10 +845,11 @@ export default function BecomeAPartner() {
                         <input
                           type="text"
                           name="firstName"
-                          value={formData.firstName}
-                          onChange={handleChange}
+                          value={applicationData.firstName}
+                          onChange={handleApplicationChange}
                           required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          disabled={applicationLoading}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                           placeholder="John"
                         />
                       </div>
@@ -638,10 +860,11 @@ export default function BecomeAPartner() {
                         <input
                           type="text"
                           name="lastName"
-                          value={formData.lastName}
-                          onChange={handleChange}
+                          value={applicationData.lastName}
+                          onChange={handleApplicationChange}
                           required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          disabled={applicationLoading}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                           placeholder="Doe"
                         />
                       </div>
@@ -661,10 +884,11 @@ export default function BecomeAPartner() {
                         <input
                           type="text"
                           name="companyName"
-                          value={formData.companyName}
-                          onChange={handleChange}
+                          value={applicationData.companyName}
+                          onChange={handleApplicationChange}
                           required
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          disabled={applicationLoading}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                           placeholder="Your Company LLC"
                         />
                       </div>
@@ -677,10 +901,11 @@ export default function BecomeAPartner() {
                           <input
                             type="email"
                             name="email"
-                            value={formData.email}
-                            onChange={handleChange}
+                            value={applicationData.email}
+                            onChange={handleApplicationChange}
                             required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={applicationLoading}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                             placeholder="john@company.com"
                           />
                         </div>
@@ -691,10 +916,11 @@ export default function BecomeAPartner() {
                           <input
                             type="tel"
                             name="phone"
-                            value={formData.phone}
-                            onChange={handleChange}
+                            value={applicationData.phone}
+                            onChange={handleApplicationChange}
                             required
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            disabled={applicationLoading}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                             placeholder="(555) 123-4567"
                           />
                         </div>
@@ -702,14 +928,16 @@ export default function BecomeAPartner() {
                       
                       <div>
                         <label className="block text-gray-700 font-medium mb-2">
-                          Provide a Link to Your Website <span className="text-gray-400 text-sm">(Optional)</span>
+                          Provide a Link to Your Website
+                          <span className="text-gray-500 text-sm ml-2">(Optional)</span>
                         </label>
                         <input
                           type="url"
                           name="website"
-                          value={formData.website}
-                          onChange={handleChange}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          value={applicationData.website}
+                          onChange={handleApplicationChange}
+                          disabled={applicationLoading}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                           placeholder="https://www.yourcompany.com"
                         />
                       </div>
@@ -724,14 +952,16 @@ export default function BecomeAPartner() {
                     <div className="space-y-6">
                       <div>
                         <label className="block text-gray-700 font-medium mb-2">
-                          Company Overview <span className="text-gray-400 text-sm">(Optional)</span>
+                          Company Overview
+                          <span className="text-gray-500 text-sm ml-2">(Optional)</span>
                         </label>
                         <textarea
                           name="companyOverview"
-                          value={formData.companyOverview}
-                          onChange={handleChange}
+                          value={applicationData.companyOverview}
+                          onChange={handleApplicationChange}
                           rows={4}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          disabled={applicationLoading}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                           placeholder="Brief description of your company, services, and target market..."
                         />
                       </div>
@@ -742,11 +972,12 @@ export default function BecomeAPartner() {
                         </label>
                         <textarea
                           name="message"
-                          value={formData.message}
-                          onChange={handleChange}
+                          value={applicationData.message}
+                          onChange={handleApplicationChange}
                           required
                           rows={4}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          disabled={applicationLoading}
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                           placeholder="Tell us about your business goals and how we can work together..."
                         />
                       </div>
@@ -762,10 +993,24 @@ export default function BecomeAPartner() {
                       </div>
                       <button
                         type="submit"
-                        className="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 text-white font-bold py-3 px-8 rounded-lg transition-all duration-300 transform hover:scale-105 shadow-lg flex items-center space-x-2"
+                        disabled={applicationLoading}
+                        className={`font-bold py-3 px-8 rounded-lg transition-all duration-300 transform flex items-center space-x-2 ${
+                          applicationLoading
+                            ? 'bg-blue-400 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-700 hover:to-blue-900 hover:scale-105 shadow-lg'
+                        } text-white`}
                       >
-                        <span>Submit Application</span>
-                        <ArrowRight className="w-5 h-5" />
+                        {applicationLoading ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <span>Submitting...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Submit Application</span>
+                            <ArrowRight className="w-5 h-5" />
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -810,7 +1055,6 @@ export default function BecomeAPartner() {
           </div>
         </section>
       </main>
-    
     </>
   );
 }

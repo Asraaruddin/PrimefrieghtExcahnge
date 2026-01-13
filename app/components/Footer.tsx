@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Truck, Mail, Phone, MapPin, Clock, Facebook, Twitter, Linkedin, Instagram } from 'lucide-react';
+import { Truck, Mail, Phone, MapPin, Clock } from 'lucide-react';
+import { supabase } from '@/app/lib/supabaseClient';
 
 export default function Footer() {
   const [formData, setFormData] = useState({
@@ -12,18 +13,61 @@ export default function Footer() {
     company: '',
     message: ''
   });
+  
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    alert('Thank you for your message. We will contact you shortly!');
-    setFormData({
-      name: '',
-      email: '',
-      phone: '',
-      company: '',
-      message: ''
-    });
+    setLoading(true);
+    setError('');
+    setSuccess(false);
+
+    try {
+      // Simple validation
+      if (!formData.name || !formData.email || !formData.message) {
+        setError('Please fill in all required fields');
+        setLoading(false);
+        return;
+      }
+
+      // Prepare data
+      const submissionData = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone || null,
+        company: formData.company || null,
+        message: formData.message,
+        source: 'contact_form',
+        status: 'new'
+      };
+
+      console.log('Submitting:', submissionData);
+
+      // Insert into Supabase
+      const { data, error: supabaseError } = await supabase
+        .from('contact_submissions_frieght')
+        .insert([submissionData])
+        .select();
+
+      console.log('Response:', { data, error: supabaseError });
+
+      if (supabaseError) {
+        console.error('Supabase Error:', supabaseError);
+        setError(`Database error: ${supabaseError.message}. Please check RLS policies.`);
+      } else {
+        console.log('Success! Data:', data);
+        setSuccess(true);
+        setFormData({ name: '', email: '', phone: '', company: '', message: '' });
+      }
+
+    } catch (err: any) {
+      console.error('Catch Error:', err);
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -31,6 +75,7 @@ export default function Footer() {
       ...formData,
       [e.target.name]: e.target.value
     });
+    if (error) setError('');
   };
 
   const currentYear = new Date().getFullYear();
@@ -48,8 +93,8 @@ export default function Footer() {
                     <Truck className="w-6 h-6 text-white" strokeWidth={2.5} />
                   </div>
                   <span className="text-white font-extrabold text-xl tracking-tight">
-  Prime<span className="text-blue-500">FX</span>
-</span>
+                    Prime<span className="text-blue-500">FreightExpress</span>
+                  </span>
                 </div>
               </div>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">
@@ -64,6 +109,34 @@ export default function Footer() {
               {/* Contact Form */}
               <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 md:p-8 border border-white/10">
                 <h3 className="text-2xl font-bold mb-6">Send us a Message</h3>
+                
+                {success && (
+                  <div className="mb-6 p-4 bg-green-500/20 border border-green-500/40 rounded-lg">
+                    <div className="flex items-center">
+                      <svg className="w-5 h-5 text-green-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <p className="text-green-400 font-medium">Message sent successfully!</p>
+                    </div>
+                  </div>
+                )}
+                
+                {error && (
+                  <div className="mb-6 p-4 bg-red-500/20 border border-red-500/40 rounded-lg">
+                    <div className="flex items-start">
+                      <svg className="w-5 h-5 text-red-400 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <div>
+                        <p className="text-red-400 font-medium">{error}</p>
+                        <p className="text-red-300 text-sm mt-1">
+                          Please run the SQL commands in Supabase SQL Editor to fix RLS.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
@@ -74,7 +147,8 @@ export default function Footer() {
                         value={formData.name}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                        disabled={loading}
+                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white disabled:opacity-50"
                         placeholder="Your name"
                       />
                     </div>
@@ -86,7 +160,8 @@ export default function Footer() {
                         value={formData.email}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                        disabled={loading}
+                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white disabled:opacity-50"
                         placeholder="your.email@example.com"
                       />
                     </div>
@@ -94,15 +169,16 @@ export default function Footer() {
 
                   <div className="grid md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-gray-300 mb-2">Your Phone *</label>
+                      <label className="block text-gray-300 mb-2">Phone Number *</label>
                       <input
                         type="tel"
                         name="phone"
                         value={formData.phone}
                         onChange={handleChange}
                         required
-                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-                        placeholder="(555) 123-4567"
+                        disabled={loading}
+                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white disabled:opacity-50"
+                        placeholder="+1  682-254-6683"
                       />
                     </div>
                     <div>
@@ -112,7 +188,8 @@ export default function Footer() {
                         name="company"
                         value={formData.company}
                         onChange={handleChange}
-                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                        disabled={loading}
+                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white disabled:opacity-50"
                         placeholder="Company Inc."
                       />
                     </div>
@@ -126,16 +203,22 @@ export default function Footer() {
                       onChange={handleChange}
                       rows={4}
                       required
-                      className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                      disabled={loading}
+                      className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white disabled:opacity-50"
                       placeholder="How can we help you?"
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300"
+                    disabled={loading}
+                    className={`w-full text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 ${
+                      loading 
+                        ? 'bg-blue-400 cursor-not-allowed' 
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
                   >
-                    Send Message
+                    {loading ? 'Sending...' : 'Send Message'}
                   </button>
                 </form>
               </div>
@@ -152,8 +235,7 @@ export default function Footer() {
                       <div>
                         <div className="font-bold">Address</div>
                         <div className="text-gray-300 mt-1">
-                          1441 S Hoover Rd<br />
-                          Wichita, KS 67209
+                         6179 Wauconda way west Lake Worth, FL, 33463
                         </div>
                       </div>
                     </div>
@@ -165,10 +247,10 @@ export default function Footer() {
                       <div>
                         <div className="font-bold">Email</div>
                         <a 
-                          href="mailto:support@primelog.com" 
+                          href="mailto:support@primefreightexpress.com" 
                           className="text-blue-400 hover:text-blue-300 transition-colors mt-1 block"
                         >
-                          support@primelog.com
+                          support@primefreightexpress.com
                         </a>
                       </div>
                     </div>
@@ -183,7 +265,7 @@ export default function Footer() {
                           href="tel:+13165551234" 
                           className="text-blue-400 hover:text-blue-300 transition-colors mt-1 block"
                         >
-                          +1 (316) 555-1234
+                         +1  682-254-6683
                         </a>
                       </div>
                     </div>
@@ -203,41 +285,6 @@ export default function Footer() {
                     </div>
                   </div>
                 </div>
-
-                {/* Social Links */}
-                <div>
-                  <h4 className="text-lg font-bold mb-4">Follow Us</h4>
-                  <div className="flex space-x-4">
-                    <a
-                      href="#"
-                      className="w-10 h-10 bg-gray-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors"
-                      aria-label="Facebook"
-                    >
-                      <Facebook className="w-5 h-5" />
-                    </a>
-                    <a
-                      href="#"
-                      className="w-10 h-10 bg-gray-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors"
-                      aria-label="Twitter"
-                    >
-                      <Twitter className="w-5 h-5" />
-                    </a>
-                    <a
-                      href="#"
-                      className="w-10 h-10 bg-gray-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors"
-                      aria-label="LinkedIn"
-                    >
-                      <Linkedin className="w-5 h-5" />
-                    </a>
-                    <a
-                      href="#"
-                      className="w-10 h-10 bg-gray-800 hover:bg-blue-600 rounded-lg flex items-center justify-center transition-colors"
-                      aria-label="Instagram"
-                    >
-                      <Instagram className="w-5 h-5" />
-                    </a>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -254,8 +301,8 @@ export default function Footer() {
                   <Truck className="w-4 h-4 text-white" />
                 </div>
                 <span className="text-white font-extrabold text-xl tracking-tight">
-  Prime<span className="text-blue-500">FX</span>
-</span>
+                  Prime<span className="text-blue-500">FreightExpress</span>
+                </span>
               </div>
               <p className="text-gray-400 text-sm mt-2">
                 Premium LTL Shipping Solutions
@@ -264,34 +311,8 @@ export default function Footer() {
 
             <div className="text-center md:text-right">
               <p className="text-gray-400 text-sm">
-                &copy; {currentYear} PrimeLog Logistics. All rights reserved.
+                &copy; {currentYear} PrimeFreightExpress. All rights reserved.
               </p>
-              <div className="flex flex-wrap justify-center md:justify-end space-x-4 mt-3">
-                <Link 
-                  href="/privacy" 
-                  className="text-gray-400 hover:text-white transition-colors text-sm"
-                >
-                  Privacy Policy
-                </Link>
-                <Link 
-                  href="/terms" 
-                  className="text-gray-400 hover:text-white transition-colors text-sm"
-                >
-                  Terms of Service
-                </Link>
-                <Link 
-                  href="/careers" 
-                  className="text-gray-400 hover:text-white transition-colors text-sm"
-                >
-                  Careers
-                </Link>
-                <Link 
-                  href="/sitemap" 
-                  className="text-gray-400 hover:text-white transition-colors text-sm"
-                >
-                  Sitemap
-                </Link>
-              </div>
             </div>
           </div>
         </div>
