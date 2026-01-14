@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/app/lib/supabaseClient';
 import {
   Truck, Package, CheckCircle, AlertCircle, Clock,
-  Search, Plus, RefreshCw, Eye, Edit, Trash2,
+  Search, Plus, RefreshCw, Edit, Trash2,
   MapPin, ChevronRight, Download, Filter, Calendar,
   X, Save, User, Mail, Phone, Info, ExternalLink,
-  FileText, BarChart3, Shield, TrendingUp, Bell
+  FileText, BarChart3, Shield, TrendingUp, Bell,
+  ChevronDown, MoreVertical, Eye, Copy, TruckIcon
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -39,6 +40,7 @@ interface DelayModalData {
   trackingNumber: string;
   currentReason: string | null;
   currentDeliveryDate: string;
+  currentStatus: string;
 }
 
 interface DeliveryModalData {
@@ -58,17 +60,17 @@ export default function ShipmentsPage() {
   const [deliveryData, setDeliveryData] = useState<DeliveryModalData | null>(null);
   const [delayReason, setDelayReason] = useState('');
   const [newDeliveryDate, setNewDeliveryDate] = useState('');
-  const [bulkActions, setBulkActions] = useState<string[]>([]);
   const [stats, setStats] = useState({
     total: 0,
     onTime: 0,
     delayed: 0,
-    delivered: 0
+    delivered: 0,
+    inTransit: 0
   });
+  const [statusDropdownOpen, setStatusDropdownOpen] = useState<string | null>(null);
 
   useEffect(() => {
     fetchShipments();
-    // Set up real-time subscription
     const channel = supabase
       .channel('shipments-changes')
       .on('postgres_changes', 
@@ -92,13 +94,14 @@ export default function ShipmentsPage() {
     const total = shipments.length;
     const delivered = shipments.filter(s => s.status === 'delivered').length;
     const delayed = shipments.filter(s => s.status === 'delayed').length;
+    const inTransit = shipments.filter(s => s.status === 'in_transit').length;
     const onTime = shipments.filter(s => 
       s.status === 'delivered' && 
       s.actual_delivery && 
       new Date(s.actual_delivery) <= new Date(s.scheduled_delivery)
     ).length;
 
-    setStats({ total, onTime, delayed, delivered });
+    setStats({ total, onTime, delayed, delivered, inTransit });
   };
 
   const fetchShipments = async () => {
@@ -129,10 +132,10 @@ export default function ShipmentsPage() {
       if (error) throw error;
       
       fetchShipments();
-      alert('Shipment deleted successfully');
+      showNotification('Shipment deleted successfully', 'success');
     } catch (error) {
       console.error('Error deleting shipment:', error);
-      alert('Failed to delete shipment');
+      showNotification('Failed to delete shipment', 'error');
     }
   };
 
@@ -141,7 +144,8 @@ export default function ShipmentsPage() {
       shipmentId: shipment.id,
       trackingNumber: shipment.tracking_number,
       currentReason: shipment.delay_reason,
-      currentDeliveryDate: shipment.scheduled_delivery
+      currentDeliveryDate: shipment.scheduled_delivery,
+      currentStatus: shipment.status
     });
     setDelayReason(shipment.delay_reason || '');
     setNewDeliveryDate(shipment.scheduled_delivery);
@@ -171,7 +175,6 @@ export default function ShipmentsPage() {
 
       if (newDeliveryDate) {
         updates.scheduled_delivery = newDeliveryDate;
-        // Recalculate estimated days
         const pickupDate = new Date(shipments.find(s => s.id === delayData.shipmentId)?.scheduled_pickup || '');
         const newDelivery = new Date(newDeliveryDate);
         const diffDays = Math.ceil((newDelivery.getTime() - pickupDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -190,12 +193,36 @@ export default function ShipmentsPage() {
       setDelayReason('');
       setNewDeliveryDate('');
       
-      // Show success notification
       showNotification('Delay reason updated successfully', 'success');
       fetchShipments();
     } catch (error) {
       console.error('Error updating delay:', error);
       showNotification('Failed to update delay', 'error');
+    }
+  };
+
+  const handleClearDelay = async (shipmentId: string) => {
+    try {
+      const updates = {
+        status: 'in_transit',
+        delay_reason: null,
+        delay_updated_at: null,
+        updated_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('shipments')
+        .update(updates)
+        .eq('id', shipmentId);
+
+      if (error) throw error;
+      
+      fetchShipments();
+      showNotification('Delay cleared successfully', 'success');
+      setDelayModalOpen(false);
+    } catch (error) {
+      console.error('Error clearing delay:', error);
+      showNotification('Failed to clear delay', 'error');
     }
   };
 
@@ -208,7 +235,6 @@ export default function ShipmentsPage() {
         updated_at: new Date().toISOString()
       };
 
-      // Recalculate estimated days
       const shipment = shipments.find(s => s.id === deliveryData.shipmentId);
       if (shipment) {
         const pickupDate = new Date(shipment.scheduled_pickup);
@@ -236,15 +262,31 @@ export default function ShipmentsPage() {
     }
   };
 
-  const handleMarkAsDelivered = async (shipmentId: string) => {
+  const handleStatusChange = async (shipmentId: string, newStatus: Shipment['status']) => {
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const updates = {
-        status: 'delivered',
-        actual_delivery: today,
-        scheduled_delivery: today, // Update scheduled delivery to today
+      const updates: any = {
+        status: newStatus,
         updated_at: new Date().toISOString()
       };
+
+      if (newStatus === 'delivered') {
+        updates.actual_delivery = new Date().toISOString();
+        updates.scheduled_delivery = new Date().toISOString();
+      }
+
+      const currentShipment = shipments.find(s => s.id === shipmentId);
+      if (currentShipment?.status === 'delayed' && newStatus !== 'delayed') {
+        updates.delay_reason = null;
+        updates.delay_updated_at = null;
+      }
+
+      if (newStatus === 'delayed' && !currentShipment?.delay_reason) {
+        const shipment = shipments.find(s => s.id === shipmentId);
+        if (shipment) {
+          openDelayModal(shipment);
+          return;
+        }
+      }
 
       const { error } = await supabase
         .from('shipments')
@@ -253,11 +295,12 @@ export default function ShipmentsPage() {
 
       if (error) throw error;
       
-      showNotification('Shipment marked as delivered', 'success');
+      setStatusDropdownOpen(null);
+      showNotification(`Status updated to ${newStatus.replace('_', ' ')}`, 'success');
       fetchShipments();
     } catch (error) {
-      console.error('Error marking as delivered:', error);
-      showNotification('Failed to mark as delivered', 'error');
+      console.error('Error updating status:', error);
+      showNotification('Failed to update status', 'error');
     }
   };
 
@@ -301,24 +344,19 @@ export default function ShipmentsPage() {
     });
   };
 
-  const formatDateTime = (dateString: string) => {
-    return new Date(dateString).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'delivered': return { bg: 'bg-green-500/10', text: 'text-green-400', border: 'border-green-500/20' };
-      case 'in_transit': return { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20' };
-      case 'delayed': return { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/20' };
-      case 'pending': return { bg: 'bg-yellow-500/10', text: 'text-yellow-400', border: 'border-yellow-500/20' };
-      default: return { bg: 'bg-gray-500/10', text: 'text-gray-400', border: 'border-gray-500/20' };
+      case 'delivered': return 'bg-green-500/10 text-green-400 border-green-500/20';
+      case 'in_transit': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+      case 'delayed': return 'bg-red-500/10 text-red-400 border-red-500/20';
+      case 'pending': return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
+      case 'cancelled': return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
+      default: return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
     }
+  };
+
+  const getStatusDisplay = (status: string) => {
+    return status.replace('_', ' ').toUpperCase();
   };
 
   if (loading) {
@@ -362,7 +400,7 @@ export default function ShipmentsPage() {
           </div>
         </div>
 
-        {/* Enhanced Stats Cards */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-gradient-to-br from-gray-800/60 to-gray-900/60 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50 hover:border-blue-500/30 transition-all duration-300 group hover:scale-[1.02]">
             <div className="flex items-center justify-between">
@@ -428,7 +466,7 @@ export default function ShipmentsPage() {
         </div>
       </div>
 
-      {/* Enhanced Filters and Search */}
+      {/* Filters and Search */}
       <div className="bg-gradient-to-br from-gray-800/60 to-gray-900/60 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50 mb-8">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex-1">
@@ -460,27 +498,11 @@ export default function ShipmentsPage() {
                 <option value="cancelled">Cancelled</option>
               </select>
             </div>
-
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                setStatusFilter('all');
-              }}
-              className="px-5 py-3 bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700 rounded-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
-            >
-              <X className="w-4 h-4" />
-              Clear Filters
-            </button>
-
-            <button className="px-5 py-3 bg-gradient-to-r from-blue-600/20 to-blue-700/20 hover:from-blue-600/30 hover:to-blue-700/30 border border-blue-500/30 rounded-xl transition-all duration-300 hover:scale-105 flex items-center gap-2">
-              <Download className="w-4 h-4" />
-              Export Data
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Enhanced Shipments Table */}
+      {/* Shipments Table */}
       <div className="bg-gradient-to-br from-gray-800/60 to-gray-900/60 backdrop-blur-sm rounded-2xl border border-gray-700/50 overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-700/50 bg-gray-800/30">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -492,7 +514,11 @@ export default function ShipmentsPage() {
               <div className="text-sm text-gray-400">
                 Last updated: {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </div>
-              <button className="p-2 hover:bg-gray-700/50 rounded-lg transition-colors" title="Refresh">
+              <button 
+                onClick={fetchShipments}
+                className="p-2 hover:bg-gray-700/50 rounded-lg transition-colors" 
+                title="Refresh"
+              >
                 <RefreshCw className="w-4 h-4" />
               </button>
             </div>
@@ -522,22 +548,16 @@ export default function ShipmentsPage() {
             </thead>
             <tbody className="divide-y divide-gray-700/50">
               {filteredShipments.map((shipment) => {
-                const statusColors = getStatusColor(shipment.status);
                 return (
                   <tr key={shipment.id} className="hover:bg-gray-700/20 transition-all duration-300 group">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-3">
-                        <div className={`p-2 rounded-lg ${statusColors.bg} ${statusColors.border}`}>
-                          <Truck className={`w-5 h-5 ${statusColors.text}`} />
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="space-y-1">
+                        <div className="font-mono font-bold text-lg text-blue-400 group-hover:text-blue-300 transition-colors">
+                          {shipment.tracking_number}
                         </div>
-                        <div>
-                          <div className="font-mono font-bold text-lg text-blue-400 group-hover:text-blue-300 transition-colors">
-                            {shipment.tracking_number}
-                          </div>
-                          <div className="text-sm text-gray-400 flex items-center gap-1 mt-1">
-                            <Calendar className="w-3 h-3" />
-                            Created: {formatDate(shipment.created_at)}
-                          </div>
+                        <div className="text-sm text-gray-400 flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          Created: {formatDate(shipment.created_at)}
                         </div>
                       </div>
                     </td>
@@ -562,20 +582,16 @@ export default function ShipmentsPage() {
                     </td>
                     
                     <td className="px-6 py-4">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-green-400" />
-                            <span className="text-sm font-medium">{shipment.origin_state}</span>
-                          </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="w-4 h-4 text-green-400" />
+                          <span className="text-sm font-medium">{shipment.origin_state}</span>
                           <ChevronRight className="w-4 h-4 text-gray-500" />
-                          <div className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-red-400" />
-                            <span className="text-sm font-medium">{shipment.destination_state}</span>
-                          </div>
+                          <MapPin className="w-4 h-4 text-red-400" />
+                          <span className="text-sm font-medium">{shipment.destination_state}</span>
                         </div>
                         
-                        <div className="flex items-center justify-between pt-2 border-t border-gray-700/30">
+                        <div className="flex items-center justify-between pt-2">
                           <div className="text-sm text-gray-400">
                             Est. {shipment.estimated_days} days
                           </div>
@@ -591,15 +607,58 @@ export default function ShipmentsPage() {
                     </td>
                     
                     <td className="px-6 py-4">
-                      <div className="space-y-2">
-                        <span className={`px-3 py-1.5 inline-flex text-xs font-semibold rounded-lg ${statusColors.bg} ${statusColors.text} ${statusColors.border} border`}>
-                          {shipment.status.replace('_', ' ').toUpperCase()}
-                        </span>
+                      <div className="relative">
+                        <button
+                          onClick={() => setStatusDropdownOpen(statusDropdownOpen === shipment.id ? null : shipment.id)}
+                          className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${getStatusColor(shipment.status)} hover:opacity-80 transition-opacity`}
+                        >
+                          <span className="text-sm font-semibold">
+                            {getStatusDisplay(shipment.status)}
+                          </span>
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                        
+                        {statusDropdownOpen === shipment.id && (
+                          <div className="absolute z-50 mt-2 w-48 bg-gray-800 border border-gray-700 rounded-xl shadow-xl">
+                            <div className="py-2">
+                              <button
+                                onClick={() => handleStatusChange(shipment.id, 'pending')}
+                                className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                              >
+                                Pending
+                              </button>
+                              <button
+                                onClick={() => handleStatusChange(shipment.id, 'in_transit')}
+                                className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                              >
+                                In Transit
+                              </button>
+                              <button
+                                onClick={() => handleStatusChange(shipment.id, 'delayed')}
+                                className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                              >
+                                Delayed
+                              </button>
+                              <button
+                                onClick={() => handleStatusChange(shipment.id, 'delivered')}
+                                className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                              >
+                                Delivered
+                              </button>
+                              <button
+                                onClick={() => handleStatusChange(shipment.id, 'cancelled')}
+                                className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white border-t border-gray-700 transition-colors"
+                              >
+                                Cancelled
+                              </button>
+                            </div>
+                          </div>
+                        )}
                         
                         {shipment.status === 'delayed' && shipment.delay_reason && (
                           <button
                             onClick={() => openDelayModal(shipment)}
-                            className="text-xs text-red-300 hover:text-red-200 flex items-center gap-1 transition-colors"
+                            className="text-xs text-red-300 hover:text-red-200 flex items-center gap-1 mt-2 transition-colors"
                           >
                             <AlertCircle className="w-3 h-3" />
                             View Delay Reason
@@ -607,7 +666,7 @@ export default function ShipmentsPage() {
                         )}
                         
                         {shipment.status === 'delivered' && shipment.actual_delivery && (
-                          <div className="text-xs text-green-300 flex items-center gap-1">
+                          <div className="text-xs text-green-300 flex items-center gap-1 mt-2">
                             <CheckCircle className="w-3 h-3" />
                             Delivered: {formatDate(shipment.actual_delivery)}
                           </div>
@@ -618,28 +677,12 @@ export default function ShipmentsPage() {
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => handleMarkAsDelivered(shipment.id)}
-                          className="p-2 bg-green-500/10 hover:bg-green-500/20 text-green-400 hover:text-green-300 rounded-lg transition-all duration-300 hover:scale-110"
-                          title="Mark as Delivered"
-                        >
-                          <CheckCircle className="w-4 h-4" />
-                        </button>
-                        
-                        <button
                           onClick={() => openDelayModal(shipment)}
                           className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-lg transition-all duration-300 hover:scale-110"
-                          title="Mark as Delayed"
+                          title="Update Delay"
                         >
                           <AlertCircle className="w-4 h-4" />
                         </button>
-                        
-                        <Link
-                          href={`/admin/shipments/${shipment.id}`}
-                          className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 rounded-lg transition-all duration-300 hover:scale-110"
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Link>
                         
                         <button
                           onClick={() => handleDeleteShipment(shipment.id)}
@@ -647,6 +690,10 @@ export default function ShipmentsPage() {
                           title="Delete"
                         >
                           <Trash2 className="w-4 h-4" />
+                        </button>
+                        
+                        <button className="p-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 rounded-lg transition-all duration-300 hover:scale-110">
+                          <Eye className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -684,7 +731,9 @@ export default function ShipmentsPage() {
           <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl border border-gray-700/50 w-full max-w-lg overflow-hidden shadow-2xl">
             <div className="px-6 py-4 border-b border-gray-700/50 flex items-center justify-between">
               <div>
-                <h3 className="text-xl font-bold text-white">Update Delay Status</h3>
+                <h3 className="text-xl font-bold text-white">
+                  {delayData.currentStatus === 'delayed' ? 'Update Delay Status' : 'Mark as Delayed'}
+                </h3>
                 <p className="text-sm text-gray-400">Tracking: {delayData.trackingNumber}</p>
               </div>
               <button
@@ -719,6 +768,7 @@ export default function ShipmentsPage() {
                     value={newDeliveryDate.split('T')[0]}
                     onChange={(e) => setNewDeliveryDate(e.target.value)}
                     className="flex-1 px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                    min={new Date().toISOString().split('T')[0]}
                   />
                   <div className="text-sm text-gray-400">
                     Current: {formatDate(delayData.currentDeliveryDate)}
@@ -734,21 +784,32 @@ export default function ShipmentsPage() {
               )}
             </div>
             
-            <div className="px-6 py-4 border-t border-gray-700/50 flex justify-end space-x-3">
-              <button
-                onClick={() => setDelayModalOpen(false)}
-                className="px-5 py-2.5 bg-gray-700/50 hover:bg-gray-700 rounded-xl transition-colors text-gray-300 hover:text-white"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelaySubmit}
-                disabled={!delayReason.trim()}
-                className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all duration-300 hover:scale-105 flex items-center space-x-2"
-              >
-                <Save className="w-4 h-4" />
-                <span>Update Delay Status</span>
-              </button>
+            <div className="px-6 py-4 border-t border-gray-700/50 flex justify-between space-x-3">
+              {delayData.currentReason && (
+                <button
+                  onClick={() => handleClearDelay(delayData.shipmentId)}
+                  className="px-5 py-2.5 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 rounded-xl transition-all duration-300 hover:scale-105 flex items-center space-x-2"
+                >
+                  <X className="w-4 h-4" />
+                  <span>Clear Delay</span>
+                </button>
+              )}
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setDelayModalOpen(false)}
+                  className="px-5 py-2.5 bg-gray-700/50 hover:bg-gray-700 rounded-xl transition-colors text-gray-300 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelaySubmit}
+                  disabled={!delayReason.trim()}
+                  className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all duration-300 hover:scale-105 flex items-center space-x-2"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{delayData.currentStatus === 'delayed' ? 'Update Delay' : 'Mark as Delayed'}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -774,7 +835,7 @@ export default function ShipmentsPage() {
             <div className="p-6">
               <div className="mb-6">
                 <div className="text-sm text-gray-300 mb-4">
-                  Update the scheduled delivery date for this shipment. This will automatically recalculate the estimated transit days.
+                  Update the scheduled delivery date for this shipment.
                 </div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   New Delivery Date *

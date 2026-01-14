@@ -285,82 +285,85 @@ export default function Home() {
           </div>
         </div>
       </section>
+{/* Empower Your Freight Management */}
+<section className="py-24 bg-gradient-to-b from-gray-50 via-white to-white overflow-hidden">
+  <div className="container mx-auto px-6">
 
-      {/* Empower Your Freight Management */}
-      <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Empower Your <span className="text-blue-600">Freight Management</span>
-            </h2>
-            <p className="text-xl text-gray-600">
-              Comprehensive logistics solutions designed to optimize your supply chain efficiency
-            </p>
-          </div>
+    {/* Heading */}
+    <div className="max-w-4xl mx-auto text-center mb-20">
+      <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+        Empower Your <span className="text-blue-600">Freight Management</span>
+      </h2>
+      <p className="text-xl text-gray-600">
+        Comprehensive logistics solutions designed to optimize your supply chain efficiency
+      </p>
+    </div>
 
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="space-y-8">
-              <div className="bg-white p-8 rounded-2xl shadow-xl">
-                <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mb-6">
-                  <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 01118 0z" />
-                  </svg>
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">Mission-Critical LTL Freight Solutions</h3>
-                <p className="text-gray-600 mb-6">
-                  Precision-engineered logistics with guaranteed on-time pick-up and delivery, 
-                  ensuring your shipments arrive exactly when needed.
-                </p>
-                <ul className="space-y-3">
-                  <li className="flex items-center text-gray-700">
-                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    Real-time GPS tracking and monitoring
-                  </li>
-                  <li className="flex items-center text-gray-700">
-                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    Damage-free freight shipping guarantee
-                  </li>
-                  <li className="flex items-center text-gray-700">
-                    <svg className="w-5 h-5 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    Transparent, accurate invoicing system
-                  </li>
-                </ul>
-              </div>
+    {/* Content + Image */}
+    <div className="grid lg:grid-cols-2 gap-16 items-center">
 
-              <div className="bg-gradient-to-br from-blue-600 to-blue-800 p-8 rounded-2xl text-white">
-                <h3 className="text-2xl font-bold mb-4">Putting Your Freight First</h3>
-                <p className="mb-6">
-                  We've engineered a national LTL freight network powered by cutting-edge technology 
-                  and staffed by industry experts, committed to continuous innovation and excellence 
-                  in logistics.
-                </p>
-                <div className="flex items-center">
-                  <svg className="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  <span>ISO 9001:2015 Certified Quality Management</span>
-                </div>
-              </div>
-            </div>
+      {/* LEFT CONTENT */}
+      <div>
+        <h3 className="text-3xl font-bold text-gray-900 mb-6 leading-tight">
+          Mission-Critical LTL Freight Solutions
+        </h3>
 
-            <div className="relative h-[600px] rounded-2xl overflow-hidden shadow-2xl">
-              <Image
-                src="/fright2.avif"
-                alt="Modern freight operations"
-                fill
-                className="object-cover"
-                quality={100}
-              />
-            </div>
-          </div>
+        <p className="text-lg text-gray-600 mb-8 leading-relaxed max-w-xl">
+          Precision-engineered logistics with guaranteed on-time pick-up and delivery,
+          ensuring your shipments arrive exactly when needed.
+        </p>
+
+        <ul className="space-y-5">
+          {[
+            "Real-time GPS tracking and monitoring",
+            "Damage-free freight shipping guarantee",
+            "Transparent, accurate invoicing system",
+          ].map((item, i) => (
+            <li key={i} className="flex items-start text-gray-700 text-lg">
+              <svg
+                className="w-5 h-5 text-green-500 mt-1 mr-4 flex-shrink-0"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clipRule="evenodd"
+                />
+              </svg>
+              {item}
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-10 max-w-xl">
+          <p className="text-gray-700 text-lg">
+            We’ve built a national LTL freight network powered by advanced technology
+            and operated by logistics experts focused on reliability, speed, and scale.
+          </p>
         </div>
-      </section>
+      </div>
+
+      {/* RIGHT IMAGE — BLENDED / TRANSPARENT */}
+      <div className="relative">
+        <div className="relative w-full max-w-2xl mx-auto">
+          <Image
+            src="/truck_new.png"
+            alt="Prime FX Freight Truck"
+            width={900}
+            height={500}
+            className="w-full h-auto object-contain "
+            priority
+            quality={100}
+          />
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
 
       {/* Coast-to-Coast Network */}
       <section className="py-20 bg-gray-900 text-white">

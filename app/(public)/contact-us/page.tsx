@@ -901,38 +901,10 @@ export default function Contact() {
                   />
                 ))}
               </div>
-
-              {/* Still have questions? */}
-              <div className="mt-16 text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full mb-6">
-                  <HelpCircle className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold mb-4">Still have questions?</h3>
-                <p className="text-gray-300 mb-8 max-w-2xl mx-auto">
-                  Can't find the answer you're looking for? Please chat with our friendly team.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Link
-                    href="mailto:support@primefreightexpress.com"
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-lg transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Mail className="w-5 h-5" />
-                    Email Us
-                  </Link>
-                  <Link
-                    href="tel:+13165551234"
-                    className="bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 px-8 rounded-lg transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Phone className="w-5 h-5" />
-                    Call Now
-                  </Link>
-                </div>
-              </div>
             </div>
           </div>
         </section>
       </main>
-      <Footer />
     </>
   );
 }
