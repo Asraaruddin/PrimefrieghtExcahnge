@@ -269,8 +269,7 @@ export default function Home() {
                   <div className="text-xs md:text-sm text-gray-300">On-Time</div>
                 </div>
                 <div className="text-center p-3 bg-white/5 backdrop-blur-sm rounded-lg">
-                  <div className="text-xl md:text-2xl font-bold text-white mb-1">24/7</div>
-                  <div className="text-xs md:text-sm text-gray-300">Support</div>
+                  <div className="text-xl md:text-2xl font-bold text-white mb-1">Support</div>
                 </div>
                 <div className="text-center p-3 bg-white/5 backdrop-blur-sm rounded-lg">
                   <div className="text-xl md:text-2xl font-bold text-white mb-1">1,500+</div>
@@ -517,92 +516,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Careers Section */}
-      <section className="py-20 bg-gray-900 text-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">
-              Building <span className="text-blue-400">World-Class LTL</span>
-            </h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Join our team of technology and transportation experts dedicated to safety, 
-              growth, and employee opportunity at an industry-leading company.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl overflow-hidden hover:transform hover:scale-105 transition-all duration-300">
-              <div className="relative h-64">
-                <Image
-                  src="/driver.avif"
-                  alt="Professional truck driver"
-                  fill
-                  className="object-cover"
-                  quality={100}
-                />
-              </div>
-              <div className="p-8">
-                <h3 className="text-2xl font-bold mb-4">Drivers</h3>
-                <p className="text-gray-300 mb-6">
-                  We prioritize experienced drivers with competitive benefits and schedules 
-                  that ensure nightly homecomings, and offer new drivers opportunities through 
-                  tuition-free nationwide driver schools.
-                </p>
-                <button className="text-blue-400 font-bold hover:text-blue-300">
-                  Explore Driver Opportunities →
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl overflow-hidden hover:transform hover:scale-105 transition-all duration-300">
-              <div className="relative h-64">
-                <Image
-                  src="/dockworker.avif"
-                  alt="Dockworker operating forklift"
-                  fill
-                  className="object-cover"
-                  quality={100}
-                />
-              </div>
-              <div className="p-8">
-                <h3 className="text-2xl font-bold mb-4">Dockworkers</h3>
-                <p className="text-gray-300 mb-6">
-                  Join our team and be valued as a dockworker or forklift operator in a 
-                  safe environment, with opportunities to expand your skill set and advance 
-                  your career.
-                </p>
-                <button className="text-blue-400 font-bold hover:text-blue-300">
-                  View Dock Positions →
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl overflow-hidden hover:transform hover:scale-105 transition-all duration-300">
-              <div className="relative h-64">
-                <Image
-                  src="/mechanics.avif"
-                  alt="Vehicle mechanic"
-                  fill
-                  className="object-cover"
-                  quality={100}
-                />
-              </div>
-              <div className="p-8">
-                <h3 className="text-2xl font-bold mb-4">Mechanics</h3>
-                <p className="text-gray-300 mb-6">
-                  We offer diverse opportunities to operate various equipment types, 
-                  fostering career growth and development within our organization with 
-                  continuous training programs.
-                </p>
-                <button className="text-blue-400 font-bold hover:text-blue-300">
-                  Mechanical Careers →
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
+      
       {/* Testimonial Section */}
       <section className="py-20 bg-gradient-to-r from-blue-600 to-blue-800">
         <div className="container mx-auto px-4">

@@ -672,7 +672,7 @@ export default function BecomeAPartner() {
                       className="inline-flex items-center space-x-3 text-white font-bold text-lg hover:text-blue-300 transition-colors"
                     >
                       <Phone className="w-5 h-5" />
-                      <span>Call Now: (316) 555-1234</span>
+                      <span>Call Now: +1  682-254-6683</span>
                       <ArrowRight className="w-5 h-5" />
                     </Link>
                   </div>

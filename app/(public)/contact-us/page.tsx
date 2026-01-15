@@ -164,7 +164,7 @@ export default function Contact() {
       icon: Headphones,
       title: "24/7 Support Hotline",
       description: "Immediate assistance for urgent shipments and emergencies",
-      contact: "+1 (316) 555-1234",
+      contact: "+1 682-254-6683",
       response: "Instant",
       color: "bg-blue-500",
       type: "Emergency"
@@ -173,7 +173,7 @@ export default function Contact() {
       icon: Users,
       title: "Sales & Partnerships",
       description: "Get quotes, discuss partnerships, and explore new opportunities",
-      contact: "+1 (316) 555-1234",
+      contact: "+1 682-254-6683",
       response: "Within 2 hours",
       color: "bg-green-500",
       type: "Business"
@@ -182,7 +182,7 @@ export default function Contact() {
       icon: MessageSquare,
       title: "Customer Support",
       description: "Track shipments, resolve issues, and get shipping assistance",
-      contact: "+1 (316) 555-1234",
+      contact: "+1 682-254-6683",
       response: "Within 4 hours",
       color: "bg-purple-500",
       type: "General"
@@ -191,7 +191,7 @@ export default function Contact() {
       icon: Globe,
       title: "International Services",
       description: "Global shipping, customs clearance, and international logistics",
-      contact: "+1 (316) 555-1234",
+      contact: "+1 682-254-6683",
       response: "Within 6 hours",
       color: "bg-orange-500",
       type: "International"
@@ -228,7 +228,7 @@ export default function Contact() {
   const faqItems = [
     {
       question: "What's the fastest way to get support?",
-      answer: "For urgent matters, call our 24/7 support hotline at +1 (316) 555-1234. For non-urgent inquiries, email us at support@primefreightexpress.com with a guaranteed response within 4 hours."
+      answer: "For urgent matters, call our 24/7 support hotline at +1 +1  682-254-6683. For non-urgent inquiries, email us at support@primefreightexpress.com with a guaranteed response within 4 hours."
     },
     {
       question: "Do you offer support in languages other than English?",
@@ -322,64 +322,7 @@ export default function Contact() {
                 </p>
               </div>
 
-              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-20">
-                {contactMethods.map((method, index) => (
-                  <div
-                    key={index}
-                    className="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100 min-h-[340px] flex flex-col"
-                  >
-                    <div className="flex items-center justify-between mb-5">
-                      <div className={`w-12 h-12 ${method.color} rounded-xl flex items-center justify-center`}>
-                        <method.icon className="w-6 h-6 text-white" />
-                      </div>
-                      <span className="text-xs font-semibold px-3 py-1 bg-gray-100 text-gray-700 rounded-full whitespace-nowrap">
-                        {method.type}
-                      </span>
-                    </div>
-
-                    <h3 className="text-lg font-bold text-gray-900 mb-2 leading-tight">
-                      {method.title}
-                    </h3>
-
-                    <p className="text-gray-600 text-sm mb-6 leading-relaxed">
-                      {method.description}
-                    </p>
-
-                    <div className="flex-grow" />
-
-                    <div className="space-y-4">
-                      <div className="flex items-start gap-3">
-                        <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                          <Phone className="w-4 h-4 text-gray-600" />
-                        </div>
-                        <div className="max-w-full">
-                          <div className="font-semibold text-gray-900 text-sm break-all">
-                            {method.contact}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            Primary contact
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <div className="w-9 h-9 bg-gray-100 rounded-lg flex items-center justify-center shrink-0">
-                          <Clock className="w-4 h-4 text-gray-600" />
-                        </div>
-                        <div>
-                          <div className="font-semibold text-green-600 text-sm">
-                            {method.response}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            Average response time
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
+              
               {/* Talk to Sales & Support Section */}
               <div className="grid lg:grid-cols-2 gap-12 mb-20">
                 <div className="bg-gradient-to-br from-blue-600 to-blue-800 rounded-3xl p-8 text-white">
