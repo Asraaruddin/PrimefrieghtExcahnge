@@ -2,8 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Truck, Shield, Mail, Menu, X, ChevronRight,MapPin,FileText } from 'lucide-react';
+import {
+  Shield,
+  Mail,
+  Menu,
+  X,
+  MapPin
+} from 'lucide-react';
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -11,9 +18,7 @@ export default function Navbar() {
   const pathname = usePathname();
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
-    };
+    const handleScroll = () => setScrolled(window.scrollY > 50);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -34,40 +39,41 @@ export default function Navbar() {
       >
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center">
-            
-            {/* LOGO (UNCHANGED) */}
-            <Link href="/" className="flex items-center space-x-3 group">
-  {/* Icon */}
-  <div className="relative">
-    <div className="absolute -inset-2 bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg blur opacity-0 group-hover:opacity-30 transition-all duration-300" />
-    <div className="relative w-11 h-11 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 rounded-lg flex items-center justify-center shadow-lg">
-      <Truck className="w-5 h-5 text-white" strokeWidth={2.5} />
-    </div>
-  </div>
 
-  {/* Brand Text */}
-  <div className="leading-tight">
-    <span className="block text-white font-extrabold text-lg tracking-wide">
-      Central
-    </span>
-    <span className="block text-blue-400 font-semibold text-sm tracking-wider uppercase">
-      Freight Express
-    </span>
+            {/* LOGO */}
+           <Link href="/" className="flex items-center">
+  <div
+    className="
+      h-11 flex items-center
+      transition-all duration-300 ease-out
+    "
+  >
+    <Image
+      src="/logo.png"
+      alt="Central Freight Express"
+      height={32}
+      width={50}
+      priority
+      className="
+        object-contain
+        transition-all duration-300 ease-out
+        hover:scale-[1.03]
+        hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.35)]
+      "
+    />
   </div>
 </Link>
-
 
             {/* DESKTOP NAV */}
             <div className="hidden md:flex items-center space-x-6">
               <NavLink href="/" label="Home" active={pathname === '/'} />
-            
-            <NavLink 
-                href="/track-shipment" 
-                label="Track Shipment" 
-                active={pathname === '/track-shipment'}
-                icon={<MapPin className="w-4 h-4" />}
-              />
 
+              <NavLink
+                href="/track-shipment"
+                label="Track Shipment"
+                icon={<MapPin className="w-4 h-4" />}
+                active={pathname === '/track-shipment'}
+              />
 
               <NavLink
                 href="/become-a-partner"
@@ -75,7 +81,6 @@ export default function Navbar() {
                 icon={<Shield className="w-4 h-4" />}
                 active={pathname === '/become-a-partner'}
               />
-              
 
               <NavLink
                 href="/contact-us"
@@ -85,17 +90,13 @@ export default function Navbar() {
               />
             </div>
 
-            {/* HAMBURGER (FIXED, NOT MOVED) */}
+            {/* HAMBURGER */}
             <button
               aria-label="Toggle Menu"
-              className="md:hidden text-white p-2 hover:bg-white/10 rounded-lg transition-colors relative z-[60]"
-              onClick={() => setMobileMenuOpen(prev => !prev)}
+              className="md:hidden text-white p-2 hover:bg-white/10 rounded-lg transition"
+              onClick={() => setMobileMenuOpen(v => !v)}
             >
-              {mobileMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
+              {mobileMenuOpen ? <X /> : <Menu />}
             </button>
           </div>
         </div>
@@ -103,61 +104,70 @@ export default function Navbar() {
 
       {/* MOBILE MENU */}
       <div
-        className={`fixed inset-0 z-40 md:hidden bg-gray-900/95 backdrop-blur-md
-        transition-transform duration-300 pt-20
+        className={`fixed inset-0 z-40 md:hidden bg-gradient-to-b from-gray-950 via-gray-900 to-gray-950
+        backdrop-blur-xl transition-transform duration-300 pt-20
         ${mobileMenuOpen ? 'translate-y-0' : '-translate-y-full'}`}
       >
-        <div className="container mx-auto px-4 pt-6 pb-8">
-          <div className="flex flex-col space-y-4">
-            <MobileLink href="/" label="Home" />
-            <MobileLink href="/become-a-partner" label="Be a Partner" icon={<Shield />} />
-            <MobileLink href="/contact-us" label="Contact Us" icon={<Mail />} />
+        <div className="container mx-auto px-4 pt-6 pb-8 space-y-3">
 
-            <div className="pt-4 border-t border-white/10">
-              <Link
-                href="/become-a-partner"
-                className="bg-gradient-to-r from-blue-600 to-blue-800 text-white font-bold py-3 px-6 rounded-lg w-full flex items-center justify-center space-x-2"
-              >
-                <Shield className="w-4 h-4" />
-                <span>Partner With Us</span>
-                <ChevronRight className="w-4 h-4" />
-              </Link>
-            </div>
-          </div>
+          <MobileLink href="/" label="Home" active={pathname === '/'} />
+
+          <MobileLink
+            href="/track-shipment"
+            label="Track Shipment"
+            icon={<MapPin />}
+            active={pathname === '/track-shipment'}
+          />
+
+          <MobileLink
+            href="/become-a-partner"
+            label="Be a Partner"
+            icon={<Shield />}
+            active={pathname === '/become-a-partner'}
+          />
+
+          <MobileLink
+            href="/contact-us"
+            label="Contact Us"
+            icon={<Mail />}
+            active={pathname === '/contact-us'}
+          />
         </div>
       </div>
     </>
   );
 }
 
-/* ---------- Helpers ---------- */
+/* ---------- HELPERS ---------- */
 
 function NavLink({ href, label, icon, active }: any) {
   return (
     <Link
       href={href}
-      className={`font-bold transition-colors duration-300 text-base px-3 py-2 rounded-lg flex items-center space-x-2 ${
+      className={`px-3 py-2 rounded-lg font-semibold flex items-center gap-2 transition-all duration-200 ${
         active
-          ? 'text-blue-400 bg-white/5'
+          ? 'text-blue-100 bg-white/10'
           : 'text-white hover:text-blue-300 hover:bg-white/5'
       }`}
     >
       {icon}
-      <span>{label}</span>
+      {label}
     </Link>
   );
 }
 
-function MobileLink({ href, label, icon }: any) {
+function MobileLink({ href, label, icon, active }: any) {
   return (
     <Link
       href={href}
-      className="font-bold text-lg px-4 py-3 rounded-lg flex items-center space-x-3 text-white hover:bg-white/10"
+      className={`px-4 py-3 rounded-xl flex items-center gap-3 font-semibold transition-all duration-200 ${
+        active
+          ? 'bg-blue-600/20 text-blue-400 border border-blue-500/40'
+          : 'text-white hover:bg-white/10'
+      }`}
     >
       {icon && <span className="w-5 h-5">{icon}</span>}
-      <span>{label}</span>
+      {label}
     </Link>
   );
 }
-
-

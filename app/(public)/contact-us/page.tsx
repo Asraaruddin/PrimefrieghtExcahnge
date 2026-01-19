@@ -652,8 +652,8 @@ export default function Contact() {
                     <div className="flex flex-col lg:flex-row items-center justify-between space-y-4 sm:space-y-6 lg:space-y-0">
                       <div className="text-xs sm:text-sm text-gray-500 text-center lg:text-left">
                         By submitting this form, you agree to our{' '}
-                        <a href="/privacy" className="text-blue-600 hover:underline">Privacy Policy</a> and{' '}
-                        <a href="/terms" className="text-blue-600 hover:underline">Terms of Service</a>.
+                        <a href="/PrivacyNotice" className="text-blue-600 hover:underline">Privacy Policy</a> and{' '}
+                        <a href="/TermsOfUse" className="text-blue-600 hover:underline">Terms of Service</a>.
                       </div>
                       <button
                         type="submit"

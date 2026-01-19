@@ -58,7 +58,7 @@ export default function LoginPage() {
         console.error('Profile fetch error:', profileError);
         // Check if profile doesn't exist
         if (profileError.code === 'PGRST116') {
-          setError('User profile not found. Please run the SQL setup script first.');
+          setError('User profile not found. Please contact your administrator.');
           await supabase.auth.signOut();
           return;
         }
@@ -66,7 +66,7 @@ export default function LoginPage() {
       }
 
       if (!profile) {
-        setError('Profile not found. Please setup the database first.');
+        setError('Profile not found. Please contact your administrator.');
         await supabase.auth.signOut();
         return;
       }
@@ -101,28 +101,25 @@ export default function LoginPage() {
     }
   };
 
-  // Updated credentials based on the SQL setup
-  const demoCredentials = [
-    { 
-      email: 'admin@primefx.com', 
-      password: 'Admin@1234', 
-      role: 'Admin',
-      description: 'Full administrative access'
-    },
-    { 
-      email: 'warehouse@primefx.com', 
-      password: 'Warehouse@1234', 
-      role: 'Warehouse Staff',
-      description: 'Shipment and inventory management'
-    }
-  ];
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col items-center justify-center p-4">
       {/* Main Login Card */}
       <div className="w-full max-w-md">
         <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 shadow-2xl">
-          <h2 className="text-2xl font-bold text-white text-center mb-6">
+          {/* Logo Section */}
+          <div className="flex justify-center mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl flex items-center justify-center">
+                <Shield className="w-6 h-6 text-white" />
+              </div>
+              <div className="text-center">
+                <h1 className="text-2xl font-bold text-white">Central Freight Express</h1>
+                <p className="text-sm text-gray-400">Admin Dashboard</p>
+              </div>
+            </div>
+          </div>
+          
+          <h2 className="text-xl font-bold text-white text-center mb-6">
             Sign In to Dashboard
           </h2>
           
@@ -130,8 +127,8 @@ export default function LoginPage() {
             {error && (
               <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
                 <div className="flex items-center">
-                  <Shield className="w-5 h-5 text-red-400 mr-3" />
-                  <span className="text-red-300">{error}</span>
+                  <AlertCircle className="w-5 h-5 text-red-400 mr-3" />
+                  <span className="text-red-300 text-sm">{error}</span>
                 </div>
               </div>
             )}
@@ -147,8 +144,8 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full pl-12 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-                  placeholder="admin@primefx.com"
+                  className="w-full pl-12 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white transition-all duration-200"
+                  placeholder="Enter your email address"
                   autoComplete="email"
                 />
               </div>
@@ -165,8 +162,8 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full pl-12 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
-                  placeholder="••••••••"
+                  className="w-full pl-12 pr-4 py-3 bg-gray-700 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white transition-all duration-200"
+                  placeholder="Enter your password"
                   autoComplete="current-password"
                 />
               </div>
@@ -175,7 +172,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5 active:translate-y-0"
+              className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold rounded-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl"
             >
               {loading ? (
                 <span className="flex items-center justify-center">
@@ -190,7 +187,7 @@ export default function LoginPage() {
             <div className="text-center pt-4">
               <Link 
                 href="/" 
-                className="text-blue-400 hover:text-blue-300 text-sm inline-flex items-center gap-1"
+                className="text-blue-400 hover:text-blue-300 text-sm inline-flex items-center gap-1 transition-colors"
               >
                 ← Back to Main Website
               </Link>
@@ -198,37 +195,25 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Debug/Setup Section */}
-        <div className="mt-8 bg-gray-800/30 backdrop-blur-sm rounded-xl p-6 border border-gray-700">          
-          <div className="space-y-4">
-            <div className="bg-gray-900/50 rounded-lg p-4">
-              <h4 className="text-sm font-medium text-white mb-2 flex items-center gap-2">
-                <Shield className="w-4 h-4 text-purple-400" />
-                Test Credentials
-              </h4>
-              <div className="space-y-2">
-                {demoCredentials.map((cred, index) => (
-                  <div key={index} className="flex items-center justify-between bg-gray-800 p-2 rounded">
-                    <div>
-                      <span className="text-xs font-medium text-white">{cred.role}</span>
-                      <p className="text-xs text-gray-400">{cred.email}</p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setEmail(cred.email);
-                        setPassword(cred.password);
-                      }}
-                      className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded transition-colors"
-                    >
-                      Fill
-                    </button>
-                  </div>
-                ))}
+        {/* Security Information Footer */}
+        <div className="mt-8 text-center">
+          <div className="bg-gray-800/30 backdrop-blur-sm rounded-xl p-6 border border-gray-700/50">
+            <div className="flex items-center justify-center mb-4">
+              <div className="flex items-center space-x-2">
+                <Shield className="w-5 h-5 text-green-400" />
+                <span className="text-sm font-medium text-green-400">Secure Login</span>
               </div>
             </div>
+            <p className="text-xs text-gray-400">
+              Your credentials are encrypted and securely transmitted.
+              <br />
+              Unauthorized access is strictly prohibited.
+            </p>
+            <div className="mt-4 flex items-center justify-center space-x-2 text-xs text-gray-500">
+              <Database className="w-3 h-3" />
+              <span>Central Freight Express Admin Portal</span>
+            </div>
           </div>
-
-         
         </div>
       </div>
     </div>

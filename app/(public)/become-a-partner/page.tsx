@@ -33,6 +33,7 @@ export default function BecomeAPartner() {
 
   const [scrollProgress, setScrollProgress] = useState(0);
   const heroRef = useRef<HTMLDivElement>(null);
+  const applicationSectionRef = useRef<HTMLDivElement>(null);
   
   // Loading and error states for Consultation Form
   const [consultationLoading, setConsultationLoading] = useState(false);
@@ -216,6 +217,16 @@ export default function BecomeAPartner() {
     if (applicationError) setApplicationError('');
   };
 
+  // Function to scroll to application section
+  const scrollToApplication = () => {
+    if (applicationSectionRef.current) {
+      applicationSectionRef.current.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  };
+
   return (
     <>
       <main className="min-h-screen">
@@ -254,12 +265,12 @@ export default function BecomeAPartner() {
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 mb-12">
-                  <Link
-                    href="#apply"
+                  <button
+                    onClick={scrollToApplication}
                     className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-8 rounded-lg transition-all duration-300 transform hover:scale-105 text-center"
                   >
                     Apply Now
-                  </Link>
+                  </button>
                   <Link
                     href="#benefits"
                     className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-bold py-4 px-8 rounded-lg transition-all duration-300 border border-white/30 text-center"
@@ -486,7 +497,7 @@ export default function BecomeAPartner() {
                       </div>
                       <div className="flex items-center justify-between py-3 border-b border-white/10">
                         <span className="text-blue-100">Support Response</span>
-                        <span className="font-bold">24/7 Available</span>
+                        <span className="font-bold">Support Available</span>
                       </div>
                       <div className="flex items-center justify-between py-3">
                         <span className="text-blue-100">Training Provided</span>
@@ -535,8 +546,12 @@ export default function BecomeAPartner() {
                       Standard Support
                     </li>
                   </ul>
-                  <button className="w-full bg-gray-800 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-900 transition-colors">
-                    Learn More
+                  <button 
+                    onClick={scrollToApplication}
+                    className="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                  >
+                    <span>Learn More</span>
+                    <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
 
@@ -570,12 +585,13 @@ export default function BecomeAPartner() {
                       Volume Discounts
                     </li>
                   </ul>
-                  <Link
-                    href="#apply"
-                    className="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center"
+                  <button
+                    onClick={scrollToApplication}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
                   >
-                    Apply Now
-                  </Link>
+                    <span>Apply Now</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
                 </div>
 
                 <div className="bg-gray-50 rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-300 transition-all">
@@ -603,8 +619,12 @@ export default function BecomeAPartner() {
                       Priority Support
                     </li>
                   </ul>
-                  <button className="w-full bg-gray-800 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-900 transition-colors">
-                    Learn More
+                  <button 
+                    onClick={scrollToApplication}
+                    className="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                  >
+                    <span>Learn More</span>
+                    <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -779,7 +799,7 @@ export default function BecomeAPartner() {
         </section>
 
         {/* Partner Application Form */}
-        <section id="apply" className="py-20 bg-gray-50">
+        <section ref={applicationSectionRef} id="apply" className="py-20 bg-gray-50">
           <div className="container mx-auto px-4">
             <div className="max-w-4xl mx-auto">
               <div className="text-center mb-12">

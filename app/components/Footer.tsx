@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Truck, Mail, Phone, MapPin, Clock } from 'lucide-react';
 import { supabase } from '@/app/lib/supabaseClient';
 
@@ -88,22 +89,19 @@ export default function Footer() {
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-16">
               <div className="flex justify-center mb-6">
-                {/* Central Freight Express Logo - matching navbar style */}
-                <div className="flex items-center space-x-2">
-                  <div className="relative">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 rounded-lg flex items-center justify-center shadow-lg">
-                      <Truck className="w-6 h-6 text-white" strokeWidth={2.5} />
-                    </div>
+                {/* Central Freight Express Logo */}
+                <Link href="/" className="flex items-center">
+                  <div className="h-11 flex items-center transition-all duration-300 ease-out">
+                    <Image
+                      src="/logo.png"
+                      alt="Central Freight Express"
+                      width={50}
+                      height={32}
+                      priority
+                      className="object-contain transition-all duration-300 ease-out hover:scale-[1.03] hover:drop-shadow-[0_0_12px_rgba(59,130,246,0.35)]"
+                    />
                   </div>
-                  <div className="leading-tight">
-                    <span className="block text-white font-extrabold text-xl tracking-wide">
-                      Central
-                    </span>
-                    <span className="block text-blue-400 font-semibold text-sm tracking-wider uppercase">
-                      Freight Express
-                    </span>
-                  </div>
-                </div>
+                </Link>
               </div>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">
                 Ready to <span className="text-blue-400">Ship?</span>
@@ -273,7 +271,7 @@ export default function Footer() {
                           href="tel:+16822546683" 
                           className="text-blue-400 hover:text-blue-300 transition-colors mt-1 block"
                         >
-                          +1 682-254-6683
+                          +1 682-254-6683,(973) 435-6887
                         </a>
                       </div>
                     </div>
@@ -298,69 +296,58 @@ export default function Footer() {
           </div>
         </div>
       </div>
+{/* Footer Bottom - Real World / Pixel Perfect */}
+<div className="bg-gray-900 border-t border-gray-800">
+  <div className="container mx-auto px-4 py-6">
 
-      {/* Footer Bottom */}
-      <div className="py-8 border-t border-gray-800">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center">
-            {/* Logo Section */}
-            <div className="mb-6 lg:mb-0">
-              <div className="flex items-center space-x-3">
-                <div className="relative">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 rounded flex items-center justify-center">
-                    <Truck className="w-4 h-4 text-white" />
-                  </div>
-                </div>
-                <div className="leading-tight">
-                  <span className="block text-white font-extrabold text-lg tracking-wide">
-                    Central
-                  </span>
-                  <span className="block text-blue-400 font-semibold text-sm tracking-wider uppercase">
-                    Freight Express
-                  </span>
-                </div>
-              </div>
-              <p className="text-gray-400 text-sm mt-2">
-                Premium Freight Shipping Solutions
-              </p>
-            </div>
+    <div className="grid grid-cols-1 lg:grid-cols-3 items-center gap-6">
 
-            {/* Legal Links Section */}
-            <div className="mb-6 lg:mb-0">
-              <div className="flex flex-wrap gap-4 lg:gap-6">
-                <Link 
-                  href="/PrivacyNotice" 
-                  className="text-gray-400 hover:text-blue-400 transition-colors text-sm"
-                >
-                  Privacy Notice
-                </Link>
-                <Link 
-                  href="/TermsOfUse" 
-                  className="text-gray-400 hover:text-blue-400 transition-colors text-sm"
-                >
-                  Terms of Use
-                </Link>
-                <Link 
-                  href="/legal-terms" 
-                  className="text-gray-400 hover:text-blue-400 transition-colors text-sm"
-                >
-                  Legal Terms
-                </Link>
-              </div>
-            </div>
+      {/* LEFT: Logo + Tagline */}
+      <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3">
+        <Image
+          src="/logo.png"
+          alt="Central Freight Express"
+          width={40}
+          height={40}
+          className="object-contain"
+        />
+        <p className="text-gray-400 text-sm font-medium tracking-wide text-center sm:text-left">
+          Premium Freight Shipping Solutions
+        </p>
+      </div>
 
-            {/* Copyright Section */}
-            <div className="text-center lg:text-right">
-              <p className="text-gray-400 text-sm">
-                &copy; {currentYear} Central Freight Express. All rights reserved.
-              </p>
-              <p className="text-gray-500 text-xs mt-1">
-                Domestic road freight transportation across the United States
-              </p>
-            </div>
-          </div>
+      {/* CENTER: Legal Links */}
+      <div className="flex justify-center">
+        <div className="flex items-center text-sm font-medium tracking-wide text-gray-400 whitespace-nowrap">
+          <Link href="/PrivacyNotice" className="hover:text-blue-400 transition-colors">
+            Privacy Notice
+          </Link>
+
+          <span className="mx-2 text-gray-600">•</span>
+
+          <Link href="/TermsOfUse" className="hover:text-blue-400 transition-colors">
+            Terms of Use
+          </Link>
+
+          <span className="mx-2 text-gray-600">•</span>
+
+          <Link href="/legal-terms" className="hover:text-blue-400 transition-colors">
+            Legal Terms
+          </Link>
         </div>
       </div>
+
+      {/* RIGHT: Copyright */}
+      <div className="flex justify-center lg:justify-end">
+        <p className="text-gray-500 text-sm font-medium tracking-wide whitespace-nowrap">
+          © {currentYear} Central Freight Express
+        </p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
     </footer>
   );
 }

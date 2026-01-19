@@ -74,7 +74,7 @@ export default function TrackShipment() {
             priority
             quality={100}
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-gray-900/95 via-gray-900/80 to-gray-900/60"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-900/70 via-gray-900/50 to-gray-900/30"></div>
         </div>
         
         <div className="relative h-full flex items-center">
