@@ -41,7 +41,7 @@ export default function Home() {
             "@context": "https://schema.org",
             "@type": "LogisticsBusiness",
             "name": "Central Freight Express",
-            "alternateName": "PrimeLog",
+            "alternateName": "CFX",
             "url": "https://www.centralfreightexpress.com",
             "logo": "https://www.centralfreightexpress.com/logo.png",
             "description": "Premium LTL Transportation & Logistics Solutions with nationwide coverage.",

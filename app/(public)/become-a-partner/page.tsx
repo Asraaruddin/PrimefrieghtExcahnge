@@ -289,7 +289,7 @@ export default function BecomeAPartner() {
             <div className="max-w-5xl mx-auto">
               <div className="text-center mb-16">
                 <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-                  Become a Partner with <span className="text-blue-600">PrimeLog Logistics</span>
+                  Become a Partner with <span className="text-blue-600">Central  Freight Express Logistics</span>
                 </h2>
                 <p className="text-xl text-gray-600">
                   Join our network of strategic partners and transform your logistics business
@@ -303,7 +303,7 @@ export default function BecomeAPartner() {
                     Strategic Partnership Excellence
                   </h3>
                   <p className="text-gray-600 mb-6 leading-relaxed">
-                    At PrimeLog Logistics, we understand the immense value of strategic partnerships 
+                    At Central Freight Express , we understand the immense value of strategic partnerships 
                     in delivering exceptional service to our customers. That's why we're actively seeking 
                     dynamic partners—including individual entrepreneurs, sole proprietors, and established 
                     companies—to join our elite network.
@@ -360,7 +360,7 @@ export default function BecomeAPartner() {
                     <p className="text-gray-600 leading-relaxed">
                       Many companies excel in offering comprehensive transportation solutions 
                       but often lack highly profitable international and domestic small package 
-                      services. PrimeLog Logistics bridges this critical gap for you.
+                      services. Central Freight Express  Logistics bridges this critical gap for you.
                     </p>
                   </div>
                   
@@ -441,7 +441,7 @@ export default function BecomeAPartner() {
                       Our Business Model: <span className="text-blue-200">Partnership & Growth</span>
                     </h3>
                     <p className="text-blue-100 mb-8 leading-relaxed">
-                      At PrimeLog Logistics, we believe in building lasting relationships that benefit 
+                      At Central Freight Express, we believe in building lasting relationships that benefit 
                       both parties. Our partnership model is built on three key pillars:
                     </p>
                     
@@ -810,7 +810,7 @@ export default function BecomeAPartner() {
                   Partner <span className="text-blue-600">Application</span>
                 </h2>
                 <p className="text-gray-600">
-                  Complete the form below to start your partnership journey with PrimeLog Logistics
+                  Complete the form below to start your partnership journey with Central Freight Express Logistics
                 </p>
               </div>
 

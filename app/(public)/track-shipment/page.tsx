@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { useState } from 'react';
 import { supabase } from '@/app/lib/supabaseClient';
-import { Truck, MapPin, Clock, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
+import { Truck, MapPin, Clock, ArrowRight, CheckCircle, AlertCircle, Package, Check } from 'lucide-react';
 
 export default function TrackShipment() {
   const [trackingNumber, setTrackingNumber] = useState('');
@@ -61,13 +61,69 @@ export default function TrackShipment() {
     setError('');
   };
 
+  const getStatusDisplay = (status: string) => {
+    switch (status) {
+      case 'Pickup Pending':
+        return {
+          title: 'Pickup Pending',
+          bgColor: 'bg-yellow-500/20',
+          iconColor: 'text-yellow-400',
+          icon: <Package className="w-6 h-6" />
+        };
+      case 'Pick-up-complete':
+        return {
+          title: 'Pick-up Complete',
+          bgColor: 'bg-blue-500/20',
+          iconColor: 'text-blue-400',
+          icon: <CheckCircle className="w-6 h-6" />
+        };
+      case 'in_transit':
+        return {
+          title: 'In Transit',
+          bgColor: 'bg-purple-500/20',
+          iconColor: 'text-purple-400',
+          icon: <Truck className="w-6 h-6" />
+        };
+      case 'delayed':
+        return {
+          title: 'Delivery Delayed',
+          bgColor: 'bg-red-500/20',
+          iconColor: 'text-red-400',
+          icon: <AlertCircle className="w-6 h-6" />
+        };
+      case 'delivered':
+        return {
+          title: 'Delivered Successfully',
+          bgColor: 'bg-green-500/20',
+          iconColor: 'text-green-400',
+          icon: <Check className="w-6 h-6" />
+        };
+      case 'cancelled':
+        return {
+          title: 'Shipment Cancelled',
+          bgColor: 'bg-gray-500/20',
+          iconColor: 'text-gray-400',
+          icon: <AlertCircle className="w-6 h-6" />
+        };
+      default:
+        return {
+          title: 'Processing',
+          bgColor: 'bg-gray-500/20',
+          iconColor: 'text-gray-400',
+          icon: <Truck className="w-6 h-6" />
+        };
+    }
+  };
+
+  const statusInfo = trackingResult ? getStatusDisplay(trackingResult.status) : null;
+
   return (
     <main className="min-h-screen">
       {/* Hero Section */}
       <section className="relative min-h-screen pt-24 md:pt-32">
         <div className="absolute inset-0">
           <Image
-            src="/tracking.png"
+            src="/tracking.avif"
             alt="Premium freight tracking dashboard"
             fill
             className="object-cover"
@@ -90,7 +146,7 @@ export default function TrackShipment() {
 
               {/* Tracking Input - EXACT SAME AS HOME */}
               <div className="bg-white/10 backdrop-blur-lg rounded-xl p-1 max-w-md mx-auto mb-8 border border-white/20">
-                <form onSubmit={handleTrack} className="flex flex-col sm:flex-row gap-0">
+                <form onSubmit={handleTrack} className="flex flex-col sm:flex-row gap-2">
                   <div className="relative flex-grow">
                     <input
                       type="text"
@@ -147,32 +203,21 @@ export default function TrackShipment() {
               )}
 
               {/* Tracking Result - EXACT SAME AS HOME */}
-              {trackingResult && !isLoading && (
+              {trackingResult && !isLoading && statusInfo && (
                 <div className="max-w-3xl bg-white/10 backdrop-blur-xl rounded-2xl p-6 mb-8 border border-white/20 shadow-2xl animate-fadeIn mx-auto">
                   <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                     
-                    {/* Left Section - Status & ID - EXACT SAME AS HOME */}
+                    {/* Left Section - Status & ID - UPDATED STATUS DISPLAY */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-4 mb-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                          trackingResult.status === 'delivered' ? 'bg-green-500/20' :
-                          trackingResult.status === 'delayed' ? 'bg-red-500/20' :
-                          trackingResult.status === 'in_transit' ? 'bg-blue-500/20' :
-                          'bg-yellow-500/20'
-                        }`}>
-                          <Truck className={`w-6 h-6 ${
-                            trackingResult.status === 'delivered' ? 'text-green-400' :
-                            trackingResult.status === 'delayed' ? 'text-red-400' :
-                            trackingResult.status === 'in_transit' ? 'text-blue-400' :
-                            'text-yellow-400'
-                          }`} />
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${statusInfo.bgColor}`}>
+                          <div className={statusInfo.iconColor}>
+                            {statusInfo.icon}
+                          </div>
                         </div>
                         <div>
                           <h3 className="text-xl font-bold text-white">
-                            {trackingResult.status === 'delivered' ? 'Delivered Successfully' :
-                             trackingResult.status === 'delayed' ? 'Delivery Delayed' :
-                             trackingResult.status === 'in_transit' ? 'In Transit' :
-                             'Processing'}
+                            {statusInfo.title}
                           </h3>
                           <div className="text-sm text-blue-200">
                             Tracking ID: {trackingResult.tracking_number}

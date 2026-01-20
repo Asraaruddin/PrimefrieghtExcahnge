@@ -1,12 +1,16 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import './globals.css'
-
-const inter = Inter({ subsets: ['latin'] })
+import './globals.css'   // 🔴 REQUIRED
 
 export const metadata: Metadata = {
-  title: 'PrimeLog | Premium LTL Shipping & Logistics',
-  description: 'Industry-leading LTL freight solutions with nationwide coverage, real-time tracking, and dedicated support for your shipping needs.',
+  title: {
+    default: 'Central Freight Express',
+    template: '%s | Central Freight Express',
+  },
+  description:
+    'Reliable freight and logistics solutions with nationwide coverage and real-time tracking.',
+  icons: {
+    icon: '/favicon.ico',
+  },
 }
 
 export default function RootLayout({
@@ -16,7 +20,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className="antialiased">
         {children}
       </body>
     </html>

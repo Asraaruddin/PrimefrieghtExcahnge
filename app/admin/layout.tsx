@@ -7,7 +7,8 @@ import {
   LogOut, Globe, Shield, MessageSquare, PhoneCall, 
   Briefcase, MessageCircle, Home, Activity, RefreshCw,
   Menu, X, Package, Database, BarChart, Users,
-  ChevronRight, TrendingUp, FileText, Settings
+  ChevronRight, TrendingUp, FileText, Settings,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -29,6 +30,7 @@ export default function AdminLayout({
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [partnerDropdownOpen, setPartnerDropdownOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -92,6 +94,10 @@ export default function AdminLayout({
     setSidebarOpen(!sidebarOpen);
   };
 
+  const togglePartnerDropdown = () => {
+    setPartnerDropdownOpen(!partnerDropdownOpen);
+  };
+
   // Close sidebar on mobile when clicking a link
   const handleNavClick = () => {
     if (isMobile) {
@@ -99,16 +105,10 @@ export default function AdminLayout({
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-300">Loading Admin Panel...</p>
-        </div>
-      </div>
-    );
-  }
+  // Check if any partner dropdown items are active
+  const isPartnerDropdownActive = 
+    pathname.startsWith('/admin/consultation-requests') ||
+    pathname.startsWith('/admin/partner-applications');
 
   const navItems = [
     {
@@ -130,18 +130,6 @@ export default function AdminLayout({
       active: pathname.startsWith('/admin/contact-forms')
     },
     {
-      href: '/admin/consultation-requests',
-      label: 'Consultation',
-      icon: PhoneCall,
-      active: pathname.startsWith('/admin/consultation-requests')
-    },
-    {
-      href: '/admin/partner-applications',
-      label: 'Partner Apps',
-      icon: Briefcase,
-      active: pathname.startsWith('/admin/partner-applications')
-    },
-    {
       href: '/admin/freight-forms',
       label: 'Freight Forms',
       icon: FileText,
@@ -160,6 +148,17 @@ export default function AdminLayout({
       active: pathname.startsWith('/admin/analytics')
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-300">Loading Admin Panel...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white">
@@ -197,19 +196,6 @@ export default function AdminLayout({
                 <div className="hidden md:block">
                   <h1 className="text-lg font-bold tracking-tight">Central Freight Express</h1>
                   <p className="text-xs text-gray-400 font-medium">Admin Dashboard</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Center Section: User Info */}
-            <div className="flex items-center space-x-4">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium">{userProfile?.full_name || userProfile?.email}</p>
-                <div className="flex items-center justify-end space-x-2 mt-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-xs text-gray-400 capitalize">
-                    {userProfile?.role === 'admin' ? 'Administrator' : 'Staff'}
-                  </span>
                 </div>
               </div>
             </div>
@@ -255,8 +241,8 @@ export default function AdminLayout({
         <div className="h-full overflow-y-auto">
           <div className="p-4 h-full flex flex-col">
             
-            {/* User Info in Sidebar (Mobile) */}
-            <div className="lg:hidden mb-6 p-3 bg-gray-700/40 rounded-xl border border-gray-600/50">
+            {/* User Info in Sidebar */}
+            <div className="mb-6 p-3 bg-gray-700/40 rounded-xl border border-gray-600/50">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center">
                   <span className="text-lg font-bold">
@@ -301,11 +287,63 @@ export default function AdminLayout({
                     )}
                   </Link>
                 ))}
+
+                {/* Partner With Us Dropdown */}
+                <div className="mt-4">
+                  <button
+                    onClick={togglePartnerDropdown}
+                    className={`flex items-center justify-between w-full px-3 py-2.5 rounded-lg transition-all duration-200 group ${
+                      isPartnerDropdownActive
+                        ? 'bg-blue-600/20 text-blue-400 border-l-4 border-blue-500'
+                        : 'text-gray-300 hover:bg-gray-700/60 hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center">
+                      <Briefcase className={`w-4 h-4 mr-3 ${isPartnerDropdownActive ? 'text-blue-400' : 'text-gray-400 group-hover:text-white'}`} />
+                      <span className="text-sm font-medium">Partner With Us</span>
+                    </div>
+                    {partnerDropdownOpen ? (
+                      <ChevronUp className="w-4 h-4 text-gray-400 group-hover:text-white" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-white" />
+                    )}
+                  </button>
+                  
+                  {/* Dropdown Items */}
+                  {partnerDropdownOpen && (
+                    <div className="ml-8 mt-1 space-y-1">
+                      <Link
+                        href="/admin/consultation-requests"
+                        onClick={handleNavClick}
+                        className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 group ${
+                          pathname.startsWith('/admin/consultation-requests')
+                            ? 'bg-blue-600/20 text-blue-400'
+                            : 'text-gray-300 hover:bg-gray-700/60 hover:text-white'
+                        }`}
+                      >
+                        <PhoneCall className="w-3.5 h-3.5 mr-3 text-gray-400 group-hover:text-white" />
+                        <span className="text-sm">Consultation</span>
+                      </Link>
+                      
+                      <Link
+                        href="/admin/partner-applications"
+                        onClick={handleNavClick}
+                        className={`flex items-center px-3 py-2 rounded-lg transition-all duration-200 group ${
+                          pathname.startsWith('/admin/partner-applications')
+                            ? 'bg-blue-600/20 text-blue-400'
+                            : 'text-gray-300 hover:bg-gray-700/60 hover:text-white'
+                        }`}
+                      >
+                        <Briefcase className="w-3.5 h-3.5 mr-3 text-gray-400 group-hover:text-white" />
+                        <span className="text-sm">Partner Apps</span>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+                
               </nav>
             </div>
-
-           
-
+            
             {/* Footer Links */}
             <div className="mt-auto pt-6 border-t border-gray-700/50">
               <Link

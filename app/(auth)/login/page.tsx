@@ -19,27 +19,45 @@ export default function LoginPage() {
     setError('');
 
     try {
+      console.log('Attempting login for:', email);
+      
       // First, sign in with Supabase
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim().toLowerCase(),
         password
       });
 
       if (authError) {
-        console.error('Auth error:', authError);
-        throw authError;
+        console.error('Auth error details:', {
+          message: authError.message,
+          name: authError.name,
+          status: authError.status
+        });
+        
+        if (authError.message === 'Invalid login credentials') {
+          setError('Invalid email or password');
+        } else if (authError.message.includes('Email not confirmed')) {
+          setError('Please confirm your email first');
+        } else {
+          setError(`Authentication failed: ${authError.message}`);
+        }
+        setLoading(false);
+        return;
       }
 
-      console.log('Auth successful, user:', authData.user?.id);
+      console.log('Auth successful, user ID:', authData.user?.id);
 
       // Wait a moment for session to be established
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Get the current session
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
-        throw new Error('No session found after login');
+        console.error('No session found after login');
+        setError('Login failed: No session established');
+        setLoading(false);
+        return;
       }
 
       console.log('Session established, checking profile...');
@@ -47,27 +65,89 @@ export default function LoginPage() {
       // Check user role from profiles table
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, full_name')
         .eq('id', authData.user.id)
         .single();
 
-      console.log('Profile data:', profile);
-      console.log('Profile error:', profileError);
+      console.log('Profile fetch result:', { 
+        hasData: !!profile, 
+        profile, 
+        profileError 
+      });
 
       if (profileError) {
-        console.error('Profile fetch error:', profileError);
+        console.error('Profile fetch error details:', {
+          code: profileError.code,
+          message: profileError.message,
+          details: profileError.details,
+          hint: profileError.hint
+        });
+        
         // Check if profile doesn't exist
-        if (profileError.code === 'PGRST116') {
-          setError('User profile not found. Please contact your administrator.');
-          await supabase.auth.signOut();
+        if (profileError.code === 'PGRST116' || profileError.message?.includes('No rows found')) {
+          console.log('Profile not found, creating new profile...');
+          
+          // Try to create a profile if it doesn't exist
+          const { error: createError } = await supabase
+            .from('profiles')
+            .insert([
+              {
+                id: authData.user.id,
+                email: authData.user.email,
+                full_name: authData.user.email?.split('@')[0] || 'User',
+                role: 'warehouse_staff', // Default role
+                phone: '',
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }
+            ]);
+
+          if (createError) {
+            console.error('Profile creation error:', createError);
+            setError('Profile setup failed. Please contact administrator.');
+            await supabase.auth.signOut();
+            setLoading(false);
+            return;
+          }
+
+          console.log('Profile created successfully');
+          
+          // Retry fetching the profile
+          const { data: newProfile, error: retryError } = await supabase
+            .from('profiles')
+            .select('role, full_name')
+            .eq('id', authData.user.id)
+            .single();
+
+          if (retryError) {
+            console.error('Retry profile fetch error:', retryError);
+            setError('Failed to load user profile');
+            await supabase.auth.signOut();
+            setLoading(false);
+            return;
+          }
+
+          // Check if user has admin/warehouse staff role
+          if (['admin', 'warehouse_staff'].includes(newProfile.role)) {
+            console.log('Login successful with new profile, redirecting...');
+            router.push('/admin/');
+            router.refresh();
+          } else {
+            setError('You do not have permission to access the dashboard');
+            await supabase.auth.signOut();
+          }
+          
           return;
         }
+        
         throw profileError;
       }
 
       if (!profile) {
+        console.error('Profile is null or undefined');
         setError('Profile not found. Please contact your administrator.');
         await supabase.auth.signOut();
+        setLoading(false);
         return;
       }
 
@@ -76,7 +156,6 @@ export default function LoginPage() {
       // Check if user has admin/warehouse staff role
       if (['admin', 'warehouse_staff'].includes(profile.role)) {
         console.log('Login successful, redirecting to dashboard...');
-        // Use router for client-side navigation
         router.push('/admin/');
         router.refresh(); // Refresh to update auth state
       } else {
@@ -84,7 +163,12 @@ export default function LoginPage() {
         await supabase.auth.signOut();
       }
     } catch (error: any) {
-      console.error('Login error details:', error);
+      console.error('Login error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        fullError: JSON.stringify(error, null, 2)
+      });
       
       // More specific error messages
       if (error.message?.includes('Invalid login credentials')) {
@@ -93,6 +177,8 @@ export default function LoginPage() {
         setError('Please confirm your email first');
       } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
         setError('Network error. Please check your connection');
+      } else if (error.message?.includes('JWT')) {
+        setError('Session expired. Please try again.');
       } else {
         setError(error.message || 'Login failed. Please try again.');
       }
