@@ -61,66 +61,93 @@ export default function TrackShipment() {
     setError('');
   };
 
-  const getTrackingStages = (status: string) => {
+  const getTrackingProgress = (status: string) => {
     const stages = [
+      {
+        id: 'processing',
+        label: 'Processing',
+        icon: <Clock className="w-6 h-6" />,
+        position: 0
+      },
       {
         id: 'picked_up',
         label: 'Picked Up',
-        icon: <Package className="w-6 h-6" />
+        icon: <Package className="w-6 h-6" />,
+        position: 1
       },
       {
         id: 'in_transit',
         label: 'In Transit',
-        icon: <Truck className="w-6 h-6" />
+        icon: <Truck className="w-6 h-6" />,
+        position: 2
       },
       {
         id: 'out_for_delivery',
         label: 'Out for Delivery',
-        icon: <MapPin className="w-6 h-6" />
+        icon: <MapPin className="w-6 h-6" />,
+        position: 3
       },
       {
         id: 'delivered',
         label: 'Delivered',
-        icon: <Check className="w-6 h-6" />
+        icon: <Check className="w-6 h-6" />,
+        position: 4
       }
     ];
 
-    let currentStageIndex = -1;
+    let currentPosition = 0;
+    let progressPercentage = 0;
+    let isDelayed = false;
 
-    // Map status to stage index
+    // Map status to position and calculate progress
     switch (status) {
       case 'Pickup Pending':
-        currentStageIndex = -1; // Before first stage
+        currentPosition = 0;
+        progressPercentage = 12.5; // Halfway to Picked Up
         break;
       case 'Pick-up-complete':
-        currentStageIndex = 0; // Picked Up
+        currentPosition = 1;
+        progressPercentage = 37.5; // Picked Up + halfway to In Transit
         break;
       case 'in_transit':
-        currentStageIndex = 1; // In Transit
+        currentPosition = 2;
+        progressPercentage = 62.5; // In Transit + halfway to Out for Delivery
         break;
-      case 'out_for_delivery':
-        currentStageIndex = 2; // Out for Delivery
-        break;
+      case 'Out for Delivery':
+  currentPosition = 3;
+  progressPercentage = 87.5; // Out for Delivery + halfway to Delivered
+  break;
       case 'delivered':
-        currentStageIndex = 3; // Delivered
+        currentPosition = 4;
+        progressPercentage = 100; // Complete
         break;
       case 'delayed':
-        currentStageIndex = 1; // Stuck in transit
+        currentPosition = 2; // Stuck in transit
+        progressPercentage = 50; // Only to In Transit, no halfway progress
+        isDelayed = true;
         break;
       case 'cancelled':
-        currentStageIndex = -1; // No progress
+        currentPosition = 0;
+        progressPercentage = 0;
         break;
       default:
-        currentStageIndex = 0;
+        currentPosition = 0;
+        progressPercentage = 12.5;
     }
 
-    return stages.map((stage, index) => ({
-      ...stage,
-      isCompleted: index < currentStageIndex,
-      isCurrent: index === currentStageIndex,
-      isPending: index > currentStageIndex
-    }));
+    return {
+      stages: stages.map((stage) => ({
+        ...stage,
+        isCompleted: stage.position < currentPosition,
+        isCurrent: stage.position === currentPosition,
+        isPending: stage.position > currentPosition
+      })),
+      progressPercentage,
+      isDelayed
+    };
   };
+
+  const trackingProgress = trackingResult ? getTrackingProgress(trackingResult.status) : null;
 
   return (
     <main className="min-h-screen">
@@ -140,7 +167,7 @@ export default function TrackShipment() {
         
         <div className="relative h-full flex items-center">
           <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-5xl mx-auto">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 leading-tight text-center">
                 Track Your <span className="text-blue-400">Shipment</span>
               </h1>
@@ -196,7 +223,7 @@ export default function TrackShipment() {
 
               {/* Loading State */}
               {isLoading && !trackingResult && (
-                <div className="max-w-4xl bg-white/95 backdrop-blur-xl rounded-2xl p-8 mb-8 border border-gray-200 animate-pulse mx-auto">
+                <div className="max-w-5xl bg-white/95 backdrop-blur-xl rounded-2xl p-8 mb-8 border border-gray-200 animate-pulse mx-auto">
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-gray-200 rounded-xl"></div>
                     <div className="flex-1 space-y-3">
@@ -207,169 +234,106 @@ export default function TrackShipment() {
                 </div>
               )}
 
-              {/* Tracking Result - Pixel Perfect Timeline */}
-              {trackingResult && !isLoading && (
-                <div className="max-w-4xl bg-white/95 backdrop-blur-xl rounded-2xl p-8 md:p-12 mb-8 border border-gray-200 shadow-2xl animate-fadeIn mx-auto">
-                  
-                  {/* Tracking Progress Bar */}
-                  <div className="mb-8">
-                    <div className="relative">
-                      {/* Progress Line */}
-                      <div className="absolute top-8 left-0 right-0 h-1 bg-gray-300">
-                        {/* Active Progress Line */}
-                        <div 
-                          className="absolute top-0 left-0 h-full bg-green-500 transition-all duration-500"
-                          style={{ 
-                            width: `${(getTrackingStages(trackingResult.status).filter(s => s.isCompleted).length / 3) * 100}%` 
-                          }}
-                        ></div>
-                      </div>
+             {/* Tracking Result - Slim Real-time Progress Timeline */}
+{trackingResult && !isLoading && trackingProgress && (
+  <div className="max-w-3xl mx-auto mb-6 rounded-xl border border-gray-200 bg-white/90 backdrop-blur-md shadow-sm p-5 animate-fadeIn">
 
-                      {/* Stages */}
-                      <div className="relative flex justify-between">
-                        {getTrackingStages(trackingResult.status).map((stage, index) => (
-                          <div key={stage.id} className="flex flex-col items-center" style={{ width: '25%' }}>
-                            {/* Stage Circle */}
-                            <div className={`
-                              relative z-10 w-16 h-16 rounded-full flex items-center justify-center mb-4
-                              transition-all duration-300
-                              ${stage.isCompleted 
-                                ? 'bg-green-500 text-white' 
-                                : stage.isCurrent 
-                                  ? 'bg-green-500 text-white animate-pulse' 
-                                  : 'bg-gray-300 text-gray-500'
-                              }
-                            `}>
-                              {stage.icon}
-                            </div>
-                            
-                            {/* Stage Label */}
-                            <div className={`
-                              text-center font-semibold text-sm md:text-base
-                              ${stage.isCompleted || stage.isCurrent ? 'text-gray-900' : 'text-gray-400'}
-                            `}>
-                              {stage.label}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+    {/* Tracking ID */}
+    <div className="flex items-center justify-between mb-4">
+      <span className="text-xs uppercase tracking-wider text-gray-500">
+        Tracking Number
+      </span>
+      <span className="font-mono text-sm font-semibold text-gray-900">
+        {trackingResult.tracking_number}
+      </span>
+    </div>
 
-                  {/* Shipment Details */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-gray-200">
-                    
-                    {/* Origin */}
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <MapPin className="w-5 h-5 text-green-600" />
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Origin</div>
-                        <div className="text-base font-semibold text-gray-900">{trackingResult.origin_state}</div>
-                      </div>
-                    </div>
+    {/* Progress Timeline */}
+    <div className="relative mb-6">
 
-                    {/* Destination */}
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <MapPin className="w-5 h-5 text-red-600" />
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Destination</div>
-                        <div className="text-base font-semibold text-gray-900">{trackingResult.destination_state}</div>
-                      </div>
-                    </div>
+      {/* Background Line */}
+      <div className="absolute top-4 left-0 right-0 h-1 bg-gray-200 rounded-full">
+        <div
+          className={`h-full rounded-full transition-all duration-700 ${
+            trackingProgress.isDelayed ? 'bg-red-500' : 'bg-green-500'
+          }`}
+          style={{ width: `${trackingProgress.progressPercentage}%` }}
+        />
+      </div>
 
-                    {/* Estimated Delivery */}
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Clock className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Est. Delivery</div>
-                        <div className="text-base font-semibold text-gray-900">
-                          {trackingResult.estimated_days ? `${trackingResult.estimated_days} days` : 'Calculating...'}
-                        </div>
-                        {trackingResult.scheduled_delivery && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            {new Date(trackingResult.scheduled_delivery).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric'
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    </div>
+      {/* Stages */}
+      <div className="relative flex justify-between">
+        {trackingProgress.stages.map((stage) => (
+          <div
+            key={stage.id}
+            className="flex flex-col items-center w-1/5"
+          >
+            {/* Stage Circle */}
+            <div
+              className={`z-10 flex h-8 w-8 items-center justify-center rounded-full border text-xs transition-all
+                ${
+                  stage.isCompleted
+                    ? trackingProgress.isDelayed
+                      ? 'bg-red-500 border-red-500 text-white'
+                      : 'bg-green-500 border-green-500 text-white'
+                    : stage.isCurrent
+                    ? trackingProgress.isDelayed
+                      ? 'bg-red-500 border-red-500 text-white animate-pulse-slow'
+                      : 'bg-white border-green-500 text-green-600 ring-2 ring-green-200 animate-pulse-slow'
+                    : 'bg-gray-100 border-gray-300 text-gray-400'
+                }`}
+            >
+              {stage.icon}
+            </div>
 
-                  </div>
+            {/* Stage Label (UNCHANGED TEXT) */}
+            <span
+              className={`mt-2 text-[11px] text-center font-medium
+                ${
+                  stage.isCompleted || stage.isCurrent
+                    ? trackingProgress.isDelayed
+                      ? 'text-red-600'
+                      : 'text-gray-900'
+                    : 'text-gray-400'
+                }`}
+            >
+              {stage.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
 
-                  {/* Tracking Number */}
-                  <div className="mt-6 pt-6 border-t border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Tracking Number</div>
-                        <div className="text-base font-mono font-semibold text-gray-900">{trackingResult.tracking_number}</div>
-                      </div>
-                      
-                      {/* Status Badge */}
-                      <div className={`
-                        px-4 py-2 rounded-full text-sm font-semibold
-                        ${trackingResult.status === 'delivered' 
-                          ? 'bg-green-100 text-green-700' 
-                          : trackingResult.status === 'delayed' 
-                            ? 'bg-red-100 text-red-700'
-                            : trackingResult.status === 'cancelled'
-                              ? 'bg-gray-100 text-gray-700'
-                              : 'bg-blue-100 text-blue-700'
-                        }
-                      `}>
-                        {trackingResult.status === 'Pick-up-complete' ? 'Picked Up' 
-                          : trackingResult.status === 'in_transit' ? 'In Transit'
-                          : trackingResult.status === 'delivered' ? 'Delivered'
-                          : trackingResult.status === 'delayed' ? 'Delayed'
-                          : trackingResult.status === 'cancelled' ? 'Cancelled'
-                          : 'Pending'}
-                      </div>
-                    </div>
-                  </div>
+    {/* Status Messages - Slim Bars */}
 
-                  {/* Delay Alert */}
-                  {trackingResult.status === 'delayed' && trackingResult.delay_reason && (
-                    <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <div className="text-sm font-semibold text-red-900 mb-1">Delay Alert</div>
-                          <div className="text-sm text-red-700">{trackingResult.delay_reason}</div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+    {trackingResult.status === 'delayed' && trackingResult.delay_reason && (
+      <div className="flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+        <AlertCircle className="h-4 w-4" />
+        <span>{trackingResult.delay_reason}</span>
+      </div>
+    )}
 
-                  {/* Delivered Alert */}
-                  {trackingResult.status === 'delivered' && trackingResult.actual_delivery && (
-                    <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <div className="text-sm font-semibold text-green-900 mb-1">Package Delivered</div>
-                          <div className="text-sm text-green-700">
-                            Delivered on {new Date(trackingResult.actual_delivery).toLocaleDateString('en-US', {
-                              weekday: 'long',
-                              month: 'long',
-                              day: 'numeric',
-                              year: 'numeric'
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+    {trackingResult.status === 'delivered' && trackingResult.actual_delivery && (
+      <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700">
+        <CheckCircle className="h-4 w-4" />
+        <span>
+          Delivered on{' '}
+          {new Date(trackingResult.actual_delivery).toLocaleDateString('en-US')}
+        </span>
+      </div>
+    )}
 
-                </div>
-              )}
+    {trackingResult.status === 'cancelled' && (
+      <div className="flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700">
+        <AlertCircle className="h-4 w-4" />
+        <span>Shipment cancelled. Contact support.</span>
+      </div>
+    )}
+
+  </div>
+)}
+
+              
             </div>
           </div>
         </div>
@@ -378,7 +342,7 @@ export default function TrackShipment() {
   );
 }
 
-// Add CSS animation
+// Add CSS animations
 const styles = `
 @keyframes fadeIn {
   from {
@@ -390,17 +354,24 @@ const styles = `
     transform: translateY(0);
   }
 }
+
+@keyframes pulse-slow {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+  }
+}
+
 .animate-fadeIn {
   animation: fadeIn 0.5s ease-out;
 }
 
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
+.animate-pulse-slow {
+  animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 `;
 

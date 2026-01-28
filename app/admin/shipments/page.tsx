@@ -29,7 +29,7 @@ interface Shipment {
   scheduled_pickup: string;
   scheduled_delivery: string;
   actual_delivery: string | null;
-  status: 'Pickup Pending' | 'in_transit' | 'delayed' | 'delivered' | 'cancelled' | 'Pick-up-complete';
+  status: 'Pickup Pending' | 'in_transit' | 'delayed' | 'delivered' | 'cancelled' | 'Pick-up-complete' | 'Out for Delivery';
   driver_id: string | null;
   vehicle_id: string | null;
   driver_name?: string;
@@ -81,7 +81,8 @@ export default function ShipmentsPage() {
     delivered: 0,
     inTransit: 0,
     pickupPending: 0,
-    pickupComplete: 0
+    pickupComplete: 0,
+    outForDelivery: 0
   });
   const [statusDropdownOpen, setStatusDropdownOpen] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Shipment>>({});
@@ -114,6 +115,7 @@ export default function ShipmentsPage() {
     const inTransit = shipments.filter(s => s.status === 'in_transit').length;
     const pickupPending = shipments.filter(s => s.status === 'Pickup Pending').length;
     const pickupComplete = shipments.filter(s => s.status === 'Pick-up-complete').length;
+    const outForDelivery = shipments.filter(s => s.status === 'Out for Delivery').length;
     
     const onTime = shipments.filter(s => 
       s.status === 'delivered' && 
@@ -121,7 +123,7 @@ export default function ShipmentsPage() {
       new Date(s.actual_delivery) <= new Date(s.scheduled_delivery)
     ).length;
 
-    setStats({ total, onTime, delayed, delivered, inTransit, pickupPending, pickupComplete });
+    setStats({ total, onTime, delayed, delivered, inTransit, pickupPending, pickupComplete, outForDelivery });
   };
 
   const fetchShipments = async () => {
@@ -303,6 +305,8 @@ export default function ShipmentsPage() {
 
   const handleStatusChange = async (shipmentId: string, newStatus: Shipment['status']) => {
     try {
+      console.log('Updating status:', { shipmentId, newStatus });
+
       const updates: any = {
         status: newStatus,
         updated_at: new Date().toISOString()
@@ -332,10 +336,13 @@ export default function ShipmentsPage() {
         .update(updates)
         .eq('id', shipmentId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
       
       setStatusDropdownOpen(null);
-      showNotification(`Status updated to ${newStatus.replace(/_/g, ' ')}`, 'success');
+      showNotification(`Status updated to ${newStatus}`, 'success');
       fetchShipments();
     } catch (error) {
       console.error('Error updating status:', error);
@@ -353,7 +360,6 @@ export default function ShipmentsPage() {
         scheduled_delivery: editForm.scheduled_delivery ? new Date(editForm.scheduled_delivery).toISOString() : null,
         actual_delivery: editForm.actual_delivery ? new Date(editForm.actual_delivery).toISOString() : null,
         updated_at: new Date().toISOString(),
-        // Remove the id from updates as it shouldn't be changed
         id: undefined
       };
 
@@ -435,12 +441,21 @@ export default function ShipmentsPage() {
       case 'Pickup Pending': return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
       case 'Pick-up-complete': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
       case 'cancelled': return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
+      case 'Out for Delivery': return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
       default: return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
     }
   };
 
   const getStatusDisplay = (status: string) => {
-    return status.replace(/_/g, ' ').replace(/(^\w|\s\w)/g, m => m.toUpperCase());
+    // Custom display names for specific statuses
+    const statusDisplayMap: Record<string, string> = {
+      'in_transit': 'In Transit',
+      'Pick-up-complete': 'Pick-up Complete',
+      'Out for Delivery': 'Out for Delivery',
+      'Pickup Pending': 'Pickup Pending'
+    };
+    
+    return statusDisplayMap[status] || status.replace(/_/g, ' ').replace(/(^\w|\s\w)/g, m => m.toUpperCase());
   };
 
   if (loading) {
@@ -485,7 +500,7 @@ export default function ShipmentsPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
           <div className="bg-gradient-to-br from-gray-800/60 to-gray-900/60 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50 hover:border-blue-500/30 transition-all duration-300 group hover:scale-[1.02]">
             <div className="flex items-center justify-between">
               <div>
@@ -497,7 +512,7 @@ export default function ShipmentsPage() {
               </div>
             </div>
             <div className="mt-4 pt-4 border-t border-gray-700/50">
-              <div className="text-xs text-gray-400">Active: {shipments.filter(s => s.status === 'in_transit').length}</div>
+              <div className="text-xs text-gray-400">Active: {shipments.filter(s => s.status === 'in_transit' || s.status === 'Out for Delivery').length}</div>
             </div>
           </div>
 
@@ -546,6 +561,21 @@ export default function ShipmentsPage() {
             </div>
           </div>
 
+          <div className="bg-gradient-to-br from-gray-800/60 to-gray-900/60 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50 hover:border-orange-500/30 transition-all duration-300 group hover:scale-[1.02]">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-3xl font-bold text-white">{stats.outForDelivery}</div>
+                <div className="text-sm text-gray-400 mt-1">Out for Delivery</div>
+              </div>
+              <div className="p-3 bg-orange-500/20 rounded-xl group-hover:bg-orange-500/30 transition-colors">
+                <TruckIcon className="w-6 h-6 text-orange-400" />
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-gray-700/50">
+              <div className="text-xs text-gray-400">Being delivered today</div>
+            </div>
+          </div>
+
           <div className="bg-gradient-to-br from-gray-800/60 to-gray-900/60 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50 hover:border-purple-500/30 transition-all duration-300 group hover:scale-[1.02]">
             <div className="flex items-center justify-between">
               <div>
@@ -591,6 +621,7 @@ export default function ShipmentsPage() {
                 <option value="Pickup Pending">Pickup Pending</option>
                 <option value="Pick-up-complete">Pick-up Complete</option>
                 <option value="in_transit">In Transit</option>
+                <option value="Out for Delivery">Out for Delivery</option>
                 <option value="delayed">Delayed</option>
                 <option value="delivered">Delivered</option>
                 <option value="cancelled">Cancelled</option>
@@ -735,6 +766,12 @@ export default function ShipmentsPage() {
                               className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
                             >
                               In Transit
+                            </button>
+                            <button
+                              onClick={() => handleStatusChange(shipment.id, 'Out for Delivery')}
+                              className="w-full text-left px-4 py-2.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                            >
+                              Out for Delivery
                             </button>
                             <button
                               onClick={() => handleStatusChange(shipment.id, 'delayed')}
@@ -1059,7 +1096,7 @@ export default function ShipmentsPage() {
                       <AlertTriangle className="w-5 h-5 text-red-400" />
                       Delay Information
                     </h4>
-                    <div className="bg-red-500/10 rounded-xl p-4 space-y-2">
+                    <div className="bg-red-500/10 rounded-xl p-4 space-y=2">
                       <div className="text-sm text-gray-300">Reason for Delay:</div>
                       <div className="text-red-300">{viewData.shipment.delay_reason}</div>
                       {viewData.shipment.delay_updated_at && (
@@ -1073,7 +1110,7 @@ export default function ShipmentsPage() {
 
                 {/* Notes */}
                 {viewData.shipment.notes && (
-                  <div className="md:col-span-2 space-y-4">
+                  <div className="md:col-span-2 space-y=4">
                     <h4 className="text-lg font-bold text-white flex items-center gap-2">
                       <MessageSquare className="w-5 h-5 text-gray-400" />
                       Additional Notes
@@ -1277,6 +1314,7 @@ export default function ShipmentsPage() {
                     <option value="Pickup Pending">Pickup Pending</option>
                     <option value="Pick-up-complete">Pick-up Complete</option>
                     <option value="in_transit">In Transit</option>
+                    <option value="Out for Delivery">Out for Delivery</option>
                     <option value="delayed">Delayed</option>
                     <option value="delivered">Delivered</option>
                     <option value="cancelled">Cancelled</option>
@@ -1381,7 +1419,7 @@ export default function ShipmentsPage() {
               </div>
             </div>
             
-            <div className="px-6 py-4 border-t border-gray-700/50 flex justify-end space-x-3">
+            <div className="px-6 py-4 border-t border-gray-700/50 flex justify-end space-x=3">
               <button
                 onClick={() => setEditModalOpen(false)}
                 className="px-5 py-2.5 bg-gray-700/50 hover:bg-gray-700 rounded-xl transition-colors text-gray-300 hover:text-white"
@@ -1419,7 +1457,7 @@ export default function ShipmentsPage() {
               </button>
             </div>
             
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y=6">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Delay Reason *
@@ -1427,7 +1465,7 @@ export default function ShipmentsPage() {
                 <textarea
                   value={delayReason}
                   onChange={(e) => setDelayReason(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white placeholder-gray-500"
+                  className="w-full px=4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-white placeholder-gray-500"
                   rows={4}
                   placeholder="Enter reason for delay (e.g., Weather conditions, Mechanical issues, Traffic congestion...)"
                 />
@@ -1437,12 +1475,12 @@ export default function ShipmentsPage() {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   New Estimated Delivery Date
                 </label>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x=3">
                   <input
                     type="date"
                     value={newDeliveryDate.split('T')[0]}
                     onChange={(e) => setNewDeliveryDate(e.target.value)}
-                    className="flex-1 px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                    className="flex-1 px=4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
                     min={new Date().toISOString().split('T')[0]}
                   />
                   <div className="text-sm text-gray-400">
@@ -1459,27 +1497,27 @@ export default function ShipmentsPage() {
               )}
             </div>
             
-            <div className="px-6 py-4 border-t border-gray-700/50 flex justify-between space-x-3">
+            <div className="px=6 py-4 border-t border-gray-700/50 flex justify-between space-x=3">
               {delayData.currentReason && (
                 <button
                   onClick={() => handleClearDelay(delayData.shipmentId)}
-                  className="px-5 py-2.5 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 rounded-xl transition-all duration-300 hover:scale-105 flex items-center space-x-2"
+                  className="px=5 py-2.5 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 rounded-xl transition-all duration-300 hover:scale-105 flex items-center space-x-2"
                 >
                   <X className="w-4 h-4" />
                   <span>Clear Delay</span>
                 </button>
               )}
-              <div className="flex space-x-3">
+              <div className="flex space-x=3">
                 <button
                   onClick={() => setDelayModalOpen(false)}
-                  className="px-5 py-2.5 bg-gray-700/50 hover:bg-gray-700 rounded-xl transition-colors text-gray-300 hover:text-white"
+                  className="px=5 py-2.5 bg-gray-700/50 hover:bg-gray-700 rounded-xl transition-colors text-gray-300 hover:text-white"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDelaySubmit}
                   disabled={!delayReason.trim()}
-                  className="px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all duration-300 hover:scale-105 flex items-center space-x-2"
+                  className="px=5 py-2.5 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all duration-300 hover:scale-105 flex items-center space-x-2"
                 >
                   <Save className="w-4 h-4" />
                   <span>{delayData.currentStatus === 'delayed' ? 'Update Delay' : 'Mark as Delayed'}</span>
@@ -1492,9 +1530,9 @@ export default function ShipmentsPage() {
 
       {/* Delivery Date Modal */}
       {deliveryModalOpen && deliveryData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p=4 bg-black/70 backdrop-blur-sm">
           <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl border border-gray-700/50 w-full max-w-md overflow-hidden shadow-2xl">
-            <div className="px-6 py-4 border-b border-gray-700/50 flex items-center justify-between">
+            <div className="px=6 py-4 border-b border-gray-700/50 flex items-center justify-between">
               <div>
                 <h3 className="text-xl font-bold text-white">Update Delivery Date</h3>
                 <p className="text-sm text-gray-400">Tracking: {deliveryData.trackingNumber}</p>
@@ -1515,13 +1553,13 @@ export default function ShipmentsPage() {
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   New Delivery Date *
                 </label>
-                <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x=3">
                   <Calendar className="w-5 h-5 text-blue-400" />
                   <input
                     type="date"
                     value={newDeliveryDate.split('T')[0]}
                     onChange={(e) => setNewDeliveryDate(e.target.value)}
-                    className="flex-1 px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                    className="flex-1 px=4 py-3 bg-gray-700/50 border border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
                     min={new Date().toISOString().split('T')[0]}
                   />
                 </div>
@@ -1531,17 +1569,17 @@ export default function ShipmentsPage() {
               </div>
             </div>
             
-            <div className="px-6 py-4 border-t border-gray-700/50 flex justify-end space-x-3">
+            <div className="px=6 py-4 border-t border-gray-700/50 flex justify-end space-x=3">
               <button
                 onClick={() => setDeliveryModalOpen(false)}
-                className="px-5 py-2.5 bg-gray-700/50 hover:bg-gray-700 rounded-xl transition-colors text-gray-300 hover:text-white"
+                className="px=5 py-2.5 bg-gray-700/50 hover:bg-gray-700 rounded-xl transition-colors text-gray-300 hover:text-white"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeliveryUpdate}
                 disabled={!newDeliveryDate}
-                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all duration-300 hover:scale-105 flex items-center space-x-2"
+                className="px=5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all duration-300 hover:scale-105 flex items-center space-x-2"
               >
                 <Save className="w-4 h-4" />
                 <span>Update Delivery Date</span>
@@ -1553,7 +1591,7 @@ export default function ShipmentsPage() {
 
       {/* Real-time Status Banner */}
       <div className="fixed bottom-4 right-4 z-40">
-        <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-sm rounded-xl p-3 border border-blue-500/30 flex items-center space-x-3">
+        <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-sm rounded-xl p-3 border border-blue-500/30 flex items-center space-x=3">
           <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
           <span className="text-sm text-gray-300">Live Updates Active</span>
           <Bell className="w-4 h-4 text-blue-400 animate-pulse" />

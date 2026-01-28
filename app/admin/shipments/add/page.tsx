@@ -1,22 +1,46 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/app/lib/supabaseClient';
 import { 
-  Save, X, Truck, MapPin, Calendar, Clock, User, Mail, Phone, 
+  X, Calendar, Clock, User, Mail, Phone, 
   Navigation, Home, Building, Eye, CheckCircle, Package, 
-  AlertCircle, Loader2, ChevronRight, FileText, Shield, Tag
+  AlertCircle, Loader2, FileText, Shield, Tag,
+  RefreshCw, Lock
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+
+// Type definitions
+type ShipmentStatus = 'Pickup Pending' | 'in_transit' | 'Out for Delivery' | 'delayed' | 'delivered' | 'cancelled' | 'Pick-up-complete';
+
+interface ShipmentData {
+  tracking_number: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  origin_state: string;
+  origin_address: string;
+  destination_state: string;
+  destination_address: string;
+  estimated_days: number;
+  scheduled_pickup: string;
+  scheduled_delivery: string;
+  status: ShipmentStatus;
+  notes: string;
+  delay_reason: string;
+}
 
 export default function AddShipmentPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [generatingTracking, setGeneratingTracking] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  const [shipment, setShipment] = useState({
+  const [shipment, setShipment] = useState<ShipmentData>({
     tracking_number: '',
     customer_name: '',
     customer_email: '',
@@ -28,30 +52,141 @@ export default function AddShipmentPage() {
     estimated_days: 5,
     scheduled_pickup: new Date().toISOString().split('T')[0],
     scheduled_delivery: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    status: 'Pickup Pending' as 'Pickup Pending' | 'in_transit' | 'delayed' | 'delivered' | 'cancelled' | 'Pick-up-complete',
+    status: 'Pickup Pending',
     notes: '',
     delay_reason: ''
   });
 
-  const generateTrackingNumber = () => {
-    const timestamp = Date.now().toString().slice(-8);
-    const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-    return `SHIP-${timestamp}-${random}`;
+  // Function to generate tracking number WITHOUT leading zeros
+  const generateTrackingNumber = async (): Promise<string> => {
+    try {
+      setGeneratingTracking(true);
+      setError(null);
+      
+      // Try to get the next tracking number from the database function
+      const { data, error: rpcError } = await supabase
+        .rpc('get_next_tracking_id');
+      
+      if (rpcError) {
+        console.error('Error calling tracking number function:', rpcError);
+        // Fallback: Generate based on existing records
+        return await generateTrackingFromRecords();
+      }
+      
+      if (data) {
+        return data;
+      }
+      
+      // If function returned null, use fallback
+      return await generateTrackingFromRecords();
+      
+    } catch (error) {
+      console.error('Error generating tracking number:', error);
+      setError('Failed to generate tracking number. Please try again.');
+      return await generateTrackingFromRecords();
+    } finally {
+      setGeneratingTracking(false);
+    }
   };
 
-  const handlePreview = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Generate tracking number if not provided
-    if (!shipment.tracking_number.trim()) {
+  // Fallback: Generate based on existing records WITHOUT leading zeros
+  const generateTrackingFromRecords = async (): Promise<string> => {
+    try {
+      const currentYear = new Date().getFullYear();
+      const prefix = `CF24${currentYear}`;
+      
+      // Get all tracking numbers for this year
+      const { data, error: queryError } = await supabase
+        .from('shipments')
+        .select('tracking_number')
+        .like('tracking_number', `${prefix}%`);
+      
+      if (queryError) {
+        console.error('Error querying shipments:', queryError);
+        // Emergency fallback
+        return generateEmergencyFallback();
+      }
+      
+      if (!data || data.length === 0) {
+        // Start with 1 for this year (no leading zeros)
+        return `${prefix}1`;
+      }
+      
+      // Extract sequence numbers and find the maximum
+      let maxSequence = 0;
+      
+      data.forEach(item => {
+        const tracking = item.tracking_number;
+        if (tracking.startsWith(prefix)) {
+          const sequenceStr = tracking.substring(prefix.length);
+          const sequence = parseInt(sequenceStr);
+          if (!isNaN(sequence) && sequence > maxSequence) {
+            maxSequence = sequence;
+          }
+        }
+      });
+      
+      const nextSequence = maxSequence + 1;
+      
+      // Check if we exceed 999
+      if (nextSequence > 999) {
+        setError('Warning: Sequence numbers for this year have exceeded 999. Using emergency fallback.');
+        return generateEmergencyFallback();
+      }
+      
+      return `${prefix}${nextSequence}`;
+      
+    } catch (error) {
+      console.error('Error in generateTrackingFromRecords:', error);
+      return generateEmergencyFallback();
+    }
+  };
+
+  // Emergency fallback generation WITHOUT leading zeros
+  const generateEmergencyFallback = (): string => {
+    const now = new Date();
+    const year = now.getFullYear();
+    // Generate random number between 100 and 999
+    const random = Math.floor(Math.random() * 900) + 100;
+    return `CF24${year}${random}`;
+  };
+
+  // Generate tracking number on component mount
+  useEffect(() => {
+    const generateInitialTracking = async () => {
+      const trackingNumber = await generateTrackingNumber();
       setShipment(prev => ({
         ...prev,
-        tracking_number: generateTrackingNumber()
+        tracking_number: trackingNumber
       }));
-    }
+    };
+    
+    generateInitialTracking();
+
+    // Cleanup timeout on unmount
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Function to regenerate tracking number
+  const handleRegenerateTracking = async () => {
+    const newTracking = await generateTrackingNumber();
+    setShipment(prev => ({
+      ...prev,
+      tracking_number: newTracking
+    }));
+  };
+
+  // Handle form preview
+  const handlePreview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
     
     // Validate required fields
-    const requiredFields = [
+    const requiredFields: (keyof ShipmentData)[] = [
       'customer_name',
       'origin_state',
       'origin_address',
@@ -61,31 +196,90 @@ export default function AddShipmentPage() {
       'scheduled_delivery'
     ];
     
-    const missingFields = requiredFields.filter(field => !shipment[field as keyof typeof shipment]);
+    const missingFields = requiredFields.filter(field => !shipment[field]);
     
     if (missingFields.length > 0) {
-      alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
+      setError(`Please fill in all required fields: ${missingFields.join(', ')}`);
+      return;
+    }
+    
+    // Validate tracking number format
+    if (!shipment.tracking_number) {
+      setError('Tracking number is required. Please wait for it to generate or regenerate.');
+      return;
+    }
+    
+    // Updated regex: CF24 + 4 digit year + 1-3 digit sequence (no leading zeros)
+    const trackingRegex = /^CF24\d{4}\d{1,3}$/;
+    if (!trackingRegex.test(shipment.tracking_number)) {
+      setError('Tracking number format is invalid. Expected format: CF24YYYYNNN (no leading zeros)');
+      return;
+    }
+    
+    // Validate year in tracking number matches current year
+    const currentYear = new Date().getFullYear();
+    const yearFromTracking = parseInt(shipment.tracking_number.substring(4, 8));
+    
+    if (yearFromTracking !== currentYear) {
+      setError(`Tracking number year (${yearFromTracking}) doesn't match current year (${currentYear}). Please regenerate.`);
+      return;
+    }
+    
+    // Validate sequence is between 1 and 999
+    const sequenceStr = shipment.tracking_number.substring(8);
+    const sequence = parseInt(sequenceStr);
+    
+    if (isNaN(sequence) || sequence < 1 || sequence > 999) {
+      setError('Tracking number sequence must be between 1 and 999. Please regenerate.');
       return;
     }
     
     setReviewOpen(true);
   };
 
+  // Handle form submission
   const handleConfirmSubmit = async () => {
     setSubmitLoading(true);
+    setError(null);
     
     try {
       // Check authentication
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        alert('Session expired. Please log in again.');
+        setError('Session expired. Please log in again.');
         router.push('/login');
         return;
       }
 
-      // Prepare the shipment data according to schema
+      // Double-check if tracking number already exists
+      const { data: existing, error: checkError } = await supabase
+        .from('shipments')
+        .select('id')
+        .eq('tracking_number', shipment.tracking_number)
+        .maybeSingle();
+
+      if (checkError) {
+        console.error('Error checking tracking number:', checkError);
+      }
+
+      if (existing) {
+        // Tracking number exists, generate a new one
+        setError('This tracking number already exists. Generating a new one...');
+        const newTracking = await generateTrackingNumber();
+        setShipment(prev => ({
+          ...prev,
+          tracking_number: newTracking
+        }));
+        
+        // Retry with new tracking number
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        timeoutRef.current = setTimeout(() => handleConfirmSubmit(), 1000);
+        return;
+      }
+
+      // Prepare the shipment data
       const shipmentData = {
-        tracking_number: shipment.tracking_number || generateTrackingNumber(),
+        tracking_number: shipment.tracking_number,
         customer_name: shipment.customer_name,
         customer_email: shipment.customer_email || null,
         customer_phone: shipment.customer_phone || null,
@@ -103,51 +297,54 @@ export default function AddShipmentPage() {
         updated_at: new Date().toISOString()
       };
 
-      console.log('Submitting shipment data:', shipmentData);
-
-      const { data, error } = await supabase
+      const { data, error: insertError } = await supabase
         .from('shipments')
         .insert([shipmentData])
         .select();
 
-      if (error) {
-        console.error('Supabase error details:', error);
+      if (insertError) {
+        console.error('Supabase error details:', insertError);
         
-        if (error.message.includes('JWT') || error.message.includes('auth')) {
-          alert('Authentication error. Please log in again.');
+        if (insertError.message.includes('JWT') || insertError.message.includes('auth')) {
+          setError('Authentication error. Please log in again.');
           router.push('/login');
           return;
         }
         
-        if (error.message.includes('tracking_number_key')) {
-          alert('Tracking number already exists. Please use a different one.');
+        if (insertError.message.includes('tracking_number_key')) {
+          setError('Tracking number already exists. Generating a new one...');
+          const newTracking = await generateTrackingNumber();
+          setShipment(prev => ({
+            ...prev,
+            tracking_number: newTracking
+          }));
           setReviewOpen(false);
           setSubmitLoading(false);
           return;
         }
         
-        if (error.message.includes('status_check')) {
-          alert('Invalid status value. Please select a valid status.');
+        if (insertError.message.includes('status_check')) {
+          setError('Invalid status value. Please select a valid status.');
           setReviewOpen(false);
           setSubmitLoading(false);
           return;
         }
         
-        throw new Error(error.message || 'Failed to add shipment');
+        throw new Error(insertError.message || 'Failed to add shipment');
       }
 
-      console.log('Shipment added successfully:', data);
-      
       // Show success message
       const notification = document.createElement('div');
-      notification.className = 'fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg bg-green-600 text-white flex items-center space-x-2';
+      notification.className = 'fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg bg-green-600 text-white flex items-center space-x-2 animate-pulse';
       notification.innerHTML = `
         <span class="text-lg">✓</span>
-        <span>Shipment added successfully! Redirecting...</span>
+        <span>Shipment ${shipment.tracking_number} added successfully!</span>
       `;
       document.body.appendChild(notification);
       
-      setTimeout(() => {
+      // Redirect after 2 seconds
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => {
         notification.remove();
         router.push('/admin/shipments');
         router.refresh();
@@ -155,21 +352,24 @@ export default function AddShipmentPage() {
       
     } catch (error: any) {
       console.error('Error adding shipment:', error);
-      alert(`Failed to add shipment: ${error.message || 'Unknown error'}`);
+      setError(`Failed to add shipment: ${error.message || 'Unknown error'}`);
     } finally {
       setSubmitLoading(false);
-      setReviewOpen(false);
     }
   };
 
+  // Handle form field changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+    setError(null);
+    
     setShipment(prev => ({
       ...prev,
       [name]: name === 'estimated_days' ? parseInt(value) || 1 : value
     }));
   };
 
+  // Format date for display
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       weekday: 'short',
@@ -179,20 +379,47 @@ export default function AddShipmentPage() {
     });
   };
 
+  // Get status color for UI
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'delivered': return 'bg-green-500/10 text-green-400 border-green-500/20';
       case 'in_transit': return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+      case 'Out for Delivery': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
       case 'delayed': return 'bg-red-500/10 text-red-400 border-red-500/20';
       case 'Pickup Pending': return 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20';
-      case 'Pick-up-complete': return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+      case 'Pick-up-complete': return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
       case 'cancelled': return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
       default: return 'bg-gray-500/10 text-gray-400 border-gray-500/20';
     }
   };
 
+  // Format status for display
   const getStatusDisplay = (status: string) => {
     return status.replace(/_/g, ' ').replace(/(^\w|\s\w)/g, m => m.toUpperCase());
+  };
+
+  // Handle clear all form data
+  const handleClearAll = async () => {
+    setReviewOpen(false);
+    // Generate new tracking number first
+    const newTracking = await generateTrackingNumber();
+    // Reset form with new tracking number
+    setShipment({
+      tracking_number: newTracking,
+      customer_name: '',
+      customer_email: '',
+      customer_phone: '',
+      origin_state: '',
+      origin_address: '',
+      destination_state: '',
+      destination_address: '',
+      estimated_days: 5,
+      scheduled_pickup: new Date().toISOString().split('T')[0],
+      scheduled_delivery: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      status: 'Pickup Pending',
+      notes: '',
+      delay_reason: ''
+    });
   };
 
   // US States for dropdown
@@ -215,7 +442,7 @@ export default function AddShipmentPage() {
             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
               Add New Shipment
             </h1>
-            <p className="text-gray-400">Create a new shipment with customer details and route information</p>
+            <p className="text-gray-400">Create a new shipment with auto-generated tracking ID</p>
           </div>
           <Link
             href="/admin/shipments"
@@ -226,6 +453,16 @@ export default function AddShipmentPage() {
           </Link>
         </div>
       </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+          <div className="flex items-center">
+            <AlertCircle className="w-5 h-5 text-red-400 mr-2" />
+            <span className="text-red-300">{error}</span>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handlePreview}>
         <div className="bg-gradient-to-br from-gray-800/60 to-gray-900/60 backdrop-blur-sm rounded-2xl p-6 border border-gray-700/50 mb-6">
@@ -248,7 +485,8 @@ export default function AddShipmentPage() {
                 value={shipment.customer_name}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500 transition-all duration-300 hover:border-gray-600"
+                disabled={submitLoading}
+                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500 transition-all duration-300 hover:border-gray-600 disabled:opacity-50"
                 placeholder="John Smith"
               />
             </div>
@@ -262,7 +500,8 @@ export default function AddShipmentPage() {
                 name="customer_email"
                 value={shipment.customer_email}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500 transition-all duration-300 hover:border-gray-600"
+                disabled={submitLoading}
+                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500 transition-all duration-300 hover:border-gray-600 disabled:opacity-50"
                 placeholder="john@example.com"
               />
             </div>
@@ -276,23 +515,45 @@ export default function AddShipmentPage() {
                 name="customer_phone"
                 value={shipment.customer_phone}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500 transition-all duration-300 hover:border-gray-600"
+                disabled={submitLoading}
+                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500 transition-all duration-300 hover:border-gray-600 disabled:opacity-50"
                 placeholder="+1 (555) 123-4567"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Tracking Number (Auto-generate if empty)
+              <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center justify-between">
+                <span className="flex items-center">
+                  <Lock className="w-4 h-4 mr-2 text-gray-400" />
+                  Tracking Number (Auto-generated)
+                </span>
+                <button
+                  type="button"
+                  onClick={handleRegenerateTracking}
+                  disabled={generatingTracking || submitLoading}
+                  className="text-xs px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg flex items-center transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3 h-3 mr-1 ${generatingTracking ? 'animate-spin' : ''}`} />
+                  Regenerate
+                </button>
               </label>
-              <input
-                type="text"
-                name="tracking_number"
-                value={shipment.tracking_number}
-                onChange={handleChange}
-                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500 transition-all duration-300 hover:border-gray-600"
-                placeholder="Leave empty for auto-generation"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  name="tracking_number"
+                  value={shipment.tracking_number}
+                  readOnly
+                  className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl text-white font-mono cursor-not-allowed"
+                />
+                {generatingTracking && (
+                  <div className="absolute right-3 top-3">
+                    <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Format: CF24YYYYN (Auto-generated, no leading zeros, e.g., CF2420261, CF2420262, ..., CF24202699, CF242026100)
+              </p>
             </div>
 
             {/* Route Information */}
@@ -312,7 +573,8 @@ export default function AddShipmentPage() {
                 value={shipment.origin_state}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white appearance-none cursor-pointer hover:border-gray-600 transition-colors"
+                disabled={submitLoading}
+                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white appearance-none cursor-pointer hover:border-gray-600 transition-colors disabled:opacity-50"
               >
                 <option value="">Select Origin State</option>
                 {usStates.map(state => (
@@ -330,7 +592,8 @@ export default function AddShipmentPage() {
                 value={shipment.destination_state}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white appearance-none cursor-pointer hover:border-gray-600 transition-colors"
+                disabled={submitLoading}
+                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white appearance-none cursor-pointer hover:border-gray-600 transition-colors disabled:opacity-50"
               >
                 <option value="">Select Destination State</option>
                 {usStates.map(state => (
@@ -350,7 +613,8 @@ export default function AddShipmentPage() {
                 value={shipment.origin_address}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500 transition-all duration-300 hover:border-gray-600"
+                disabled={submitLoading}
+                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500 transition-all duration-300 hover:border-gray-600 disabled:opacity-50"
                 placeholder="123 Main St, City, ZIP Code"
               />
             </div>
@@ -366,7 +630,8 @@ export default function AddShipmentPage() {
                 value={shipment.destination_address}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500 transition-all duration-300 hover:border-gray-600"
+                disabled={submitLoading}
+                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500 transition-all duration-300 hover:border-gray-600 disabled:opacity-50"
                 placeholder="456 Oak Ave, City, ZIP Code"
               />
             </div>
@@ -391,7 +656,8 @@ export default function AddShipmentPage() {
                 min="1"
                 max="30"
                 required
-                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500 transition-all duration-300 hover:border-gray-600"
+                disabled={submitLoading}
+                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500 transition-all duration-300 hover:border-gray-600 disabled:opacity-50"
                 placeholder="5"
               />
             </div>
@@ -405,7 +671,8 @@ export default function AddShipmentPage() {
                 name="scheduled_pickup"
                 value={shipment.scheduled_pickup}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                disabled={submitLoading}
+                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white disabled:opacity-50"
               />
             </div>
 
@@ -420,7 +687,8 @@ export default function AddShipmentPage() {
                 onChange={handleChange}
                 required
                 min={shipment.scheduled_pickup}
-                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white"
+                disabled={submitLoading}
+                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white disabled:opacity-50"
               />
             </div>
 
@@ -432,11 +700,13 @@ export default function AddShipmentPage() {
                 name="status"
                 value={shipment.status}
                 onChange={handleChange}
-                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white appearance-none cursor-pointer hover:border-gray-600 transition-colors"
+                disabled={submitLoading}
+                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white appearance-none cursor-pointer hover:border-gray-600 transition-colors disabled:opacity-50"
               >
                 <option value="Pickup Pending">Pickup Pending</option>
                 <option value="Pick-up-complete">Pick-up Complete</option>
                 <option value="in_transit">In Transit</option>
+                <option value="Out for Delivery">Out for Delivery</option>
                 <option value="delayed">Delayed</option>
                 <option value="delivered">Delivered</option>
                 <option value="cancelled">Cancelled</option>
@@ -460,7 +730,8 @@ export default function AddShipmentPage() {
                 value={shipment.delay_reason}
                 onChange={handleChange}
                 rows={2}
-                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500 transition-all duration-300 hover:border-gray-600"
+                disabled={submitLoading}
+                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500 transition-all duration-300 hover:border-gray-600 disabled:opacity-50"
                 placeholder="Reason for delay (if applicable)"
               />
             </div>
@@ -479,7 +750,8 @@ export default function AddShipmentPage() {
                 value={shipment.notes}
                 onChange={handleChange}
                 rows={4}
-                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500 transition-all duration-300 hover:border-gray-600"
+                disabled={submitLoading}
+                className="w-full px-4 py-3 bg-gray-800/50 border border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500 transition-all duration-300 hover:border-gray-600 disabled:opacity-50"
                 placeholder="Add any special instructions, notes, or details about this shipment..."
               />
             </div>
@@ -495,11 +767,20 @@ export default function AddShipmentPage() {
           </Link>
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || generatingTracking || submitLoading}
             className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 rounded-xl transition-all duration-300 hover:scale-105 flex items-center disabled:opacity-50"
           >
-            <Eye className="w-5 h-5 mr-2" />
-            Preview & Add
+            {generatingTracking ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Generating Tracking ID...
+              </>
+            ) : (
+              <>
+                <Eye className="w-5 h-5 mr-2" />
+                Preview & Add
+              </>
+            )}
           </button>
         </div>
       </form>
@@ -531,8 +812,8 @@ export default function AddShipmentPage() {
                 <div className="md:col-span-2 bg-blue-500/10 rounded-xl p-4 mb-4">
                   <div className="flex flex-col md:flex-row md:items-center justify-between">
                     <div className="mb-3 md:mb-0">
-                      <div className="text-lg font-bold text-blue-400">
-                        {shipment.tracking_number || generateTrackingNumber()}
+                      <div className="text-lg font-bold text-blue-400 font-mono">
+                        {shipment.tracking_number}
                       </div>
                       <div className="text-sm text-gray-400">Tracking Number</div>
                     </div>
@@ -713,25 +994,7 @@ export default function AddShipmentPage() {
               </button>
               <div className="flex space-x-3">
                 <button
-                  onClick={() => {
-                    setReviewOpen(false);
-                    setShipment({
-                      tracking_number: '',
-                      customer_name: '',
-                      customer_email: '',
-                      customer_phone: '',
-                      origin_state: '',
-                      origin_address: '',
-                      destination_state: '',
-                      destination_address: '',
-                      estimated_days: 5,
-                      scheduled_pickup: new Date().toISOString().split('T')[0],
-                      scheduled_delivery: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                      status: 'Pickup Pending',
-                      notes: '',
-                      delay_reason: ''
-                    });
-                  }}
+                  onClick={handleClearAll}
                   disabled={submitLoading}
                   className="px-5 py-2.5 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 rounded-xl transition-all duration-300 hover:scale-105 flex items-center space-x-2 disabled:opacity-50"
                 >
